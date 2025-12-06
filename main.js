@@ -1,4 +1,4 @@
-// Firebase CDN modular imports（版本會更新，這裡用文件上的範例寫法）
+// Firebase CDN modular imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
   getAuth,
@@ -96,37 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ================= Auth UI 狀態 =================
-
-  function updateAuthUI(user) {
-    if (!userStatus || !loginBtn || !logoutBtn || !chatInput || !chatForm)
-      return;
-
-    if (user) {
-      const name = user.displayName || user.email || "已登入使用者";
-      userStatus.textContent = `已登入：${name}`;
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      editProfileBtn?.classList.remove("hidden");
-      chatInput.disabled = false;
-      chatForm.querySelector("button").disabled = false;
-      chatInput.placeholder = "輸入訊息並按 Enter 或點送出";
-    } else {
-      userStatus.textContent =
-        "目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。";
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      editProfileBtn?.classList.add("hidden");
-      chatInput.disabled = true;
-      chatForm.querySelector("button").disabled = true;
-      chatInput.placeholder = "請先登入（右上角）才能發送訊息";
-    }
-  }
-
-  onAuthStateChanged(auth, (user) => {
-    updateAuthUI(user);
-  });
-
   // ================= Auth Modal 開關 =================
 
   function openAuthModal(mode = "login") {
@@ -157,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
     authModalBackdrop.classList.add("hidden");
   }
 
-  // 開啟 / 關閉 Modal 事件
   if (loginBtn) {
     loginBtn.addEventListener("click", () => openAuthModal("login"));
   }
@@ -184,6 +152,42 @@ document.addEventListener("DOMContentLoaded", () => {
     switchToLogin.addEventListener("click", () => openAuthModal("login"));
   }
 
+  // ================= Auth UI 狀態 =================
+
+  function updateAuthUI(user) {
+    if (!userStatus || !loginBtn || !logoutBtn || !chatInput || !chatForm)
+      return;
+
+    if (user) {
+      const name = user.displayName || user.email || "已登入使用者";
+      userStatus.textContent = `已登入：${name}`;
+      loginBtn.classList.add("hidden");
+      logoutBtn.classList.remove("hidden");
+      editProfileBtn?.classList.remove("hidden");
+      chatInput.disabled = false;
+      chatForm.querySelector("button").disabled = false;
+      chatInput.placeholder = "輸入訊息並按 Enter 或點送出";
+    } else {
+      userStatus.textContent =
+        "目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。";
+      loginBtn.classList.remove("hidden");
+      logoutBtn.classList.add("hidden");
+      editProfileBtn?.classList.add("hidden");
+      chatInput.disabled = true;
+      chatForm.querySelector("button").disabled = true;
+      chatInput.placeholder = "請先登入（右上角）才能發送訊息";
+    }
+  }
+
+  // 🔥 重點：只要 Firebase 偵測到登入狀態，順便關掉登入視窗
+  onAuthStateChanged(auth, (user) => {
+    console.log("Auth state changed:", user?.email || "未登入");
+    updateAuthUI(user);
+    if (user) {
+      closeAuthModal();
+    }
+  });
+
   // ================= 註冊 / 登入提交 =================
 
   if (authForm) {
@@ -205,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         if (authMode === "login") {
           await signInWithEmailAndPassword(auth, email, password);
+          // 不在這裡關 modal，改由 onAuthStateChanged 統一處理
         } else {
           const cred = await createUserWithEmailAndPassword(
             auth,
@@ -214,8 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
           if (displayName) {
             await updateProfile(cred.user, { displayName });
           }
+          // 註冊完成也交給 onAuthStateChanged 收尾
         }
-        closeAuthModal();
       } catch (err) {
         console.error(err);
         authError.textContent = translateAuthError(err.code);
