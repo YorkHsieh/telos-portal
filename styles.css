@@ -517,6 +517,10 @@ body {
   justify-content: center;
   z-index: 300;
 }
+/* 修正：加了 hidden 就強制關閉 modal */
+.modal-backdrop.hidden {
+  display: none !important;
+}
 
 .modal {
   width: 100%;
