@@ -123,8 +123,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function closeAuthModal() {
     if (!authModalBackdrop) return;
+    console.log("closeAuthModal: hiding auth modal");
     authModalBackdrop.classList.add("hidden");
+    authModalBackdrop.style.display = "none";
   }
+
 
   if (loginBtn) {
     loginBtn.addEventListener("click", () => openAuthModal("login"));
