@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>Telos Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 開場 Logo 畫面（Splash Screen） -->
+  <div id="splash">
+    <div class="splash-logo">
+      <div class="splash-logo-icon">T</div>
+      <div class="splash-logo-text">Telos</div>
+      <div class="splash-logo-sub">Skyline Portal</div>
+    </div>
+  </div>
+
+  <!-- 主應用內容 -->
+  <div id="app-main" class="app-main">
+    <!-- 頂部導覽列 -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-logo">
+            <span>T</span>
+          </div>
+          <span class="brand-name">Telos</span>
+        </div>
+
+        <!-- Google 搜尋列 -->
+        <form
+          class="search-bar"
+          action="https://www.google.com/search"
+          method="GET"
+          target="_blank"
+        >
+          <input type="text" name="q" placeholder="在 Google 上搜尋…" />
+          <button type="submit">搜尋</button>
+        </form>
+
+        <!-- 右上角：帳號 + 工具按鈕 -->
+        <div class="topbar-right">
+          <div class="account-actions">
+            <button id="btn-login">登入</button>
+            <button id="btn-logout" class="hidden">登出</button>
+          </div>
+
+          <!-- 工具按鈕（不規則 3x3 點陣） -->
+          <button
+            class="tools-button"
+            id="tools-button"
+            aria-label="Telos 工具"
+          >
+            <span class="tools-dot-row">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+            <span class="tools-dot-row offset">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+            <span class="tools-dot-row">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 使用者狀態卡片 -->
+      <section class="card" id="user-panel">
+        <h2>歡迎來到 Telos</h2>
+        <p id="user-status">
+          目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。
+        </p>
+        <button id="btn-edit-profile" class="hidden">
+          編輯個人資料（暱稱）
+        </button>
+      </section>
+
+      <!-- 新聞區：嵌入你的 news-site -->
+      <section class="card">
+        <h2>Telos 新聞中心</h2>
+        <p class="sub">
+          內容來自：
+          <a
+            href="https://yorkhsieh.github.io/news-site/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >https://yorkhsieh.github.io/news-site/</a
+          >
+        </p>
+        <div class="news-frame-wrapper">
+          <iframe
+            src="https://yorkhsieh.github.io/news-site/"
+            title="Telos News"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+    </main>
+
+    <!-- Telos 工具面板 -->
+    <div class="tools-panel" id="tools-panel">
+      <h3 class="tools-title">Telos 工具</h3>
+      <div class="tools-grid">
+        <button class="tool-item" data-tool="chat">
+          <div class="tool-icon bubble">💬</div>
+          <div class="tool-label">聊天室</div>
+        </button>
+        <a
+          class="tool-item"
+          href="https://yorkhsieh.github.io/news-site/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <div class="tool-icon">📰</div>
+          <div class="tool-label">新聞中心</div>
+        </a>
+        <button class="tool-item" data-tool="account">
+          <div class="tool-icon">👤</div>
+          <div class="tool-label">帳號中心</div>
+        </button>
+        <button class="tool-item" data-tool="settings">
+          <div class="tool-icon">⚙️</div>
+          <div class="tool-label">設定</div>
+        </button>
+      </div>
+      <p class="tools-hint">之後可以在這裡慢慢加更多 Telos 服務。</p>
+    </div>
+
+    <!-- 右下角浮動聊天室 -->
+    <div class="chat-float" id="chat-float">
+      <div class="chat-header">
+        <span>Telos 聊天室</span>
+        <button class="chat-close" id="chat-close" aria-label="關閉聊天室">
+          ✕
+        </button>
+      </div>
+      <div class="chat-window">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-message system">
+            歡迎來到 Telos 聊天室。登入後即可發送訊息。（之後可以改成 Firebase
+            真實即時聊天室）
+          </div>
+        </div>
+
+        <form class="chat-input-row" id="chat-form">
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="請先登入（右上角）才能發送訊息"
+            disabled
+          />
+          <button type="submit" disabled>送出</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal（登入 / 註冊共用） -->
+  <div class="modal-backdrop hidden" id="auth-modal-backdrop">
+    <div class="modal" id="auth-modal">
+      <button class="modal-close" id="auth-modal-close" aria-label="關閉">
+        ✕
+      </button>
+      <h2 id="auth-modal-title">登入 Telos</h2>
+
+      <form id="auth-form">
+        <label class="field">
+          <span>電子郵件</span>
+          <input type="email" id="auth-email" required />
+        </label>
+
+        <label class="field">
+          <span>密碼</span>
+          <input type="password" id="auth-password" required minlength="6" />
+        </label>
+
+        <div id="signup-extra" class="hidden">
+          <label class="field">
+            <span>暱稱</span>
+            <input type="text" id="auth-display-name" placeholder="選填，例如：祐子" />
+          </label>
+        </div>
+
+        <button type="submit" id="auth-submit">登入</button>
+      </form>
+
+      <p class="modal-switch">
+        <span id="auth-switch-to-signup">還沒有帳號？建立 Telos 帳號</span>
+        <span id="auth-switch-to-login" class="hidden">已經有帳號？改成登入</span>
+      </p>
+
+      <p class="auth-error" id="auth-error"></p>
+    </div>
+  </div>
+
+  <!-- Firebase + 主程式 -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>
