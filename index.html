@@ -78,40 +78,7 @@
         <button id="btn-edit-profile" class="hidden">快速修改暱稱</button>
       </section>
 
-      <!-- 個人頁 Profile -->
-      <section class="card" id="profile-card">
-        <h2>個人頁</h2>
-        <p class="sub">管理你的 Telos 帳戶資料。</p>
-
-        <div class="profile-row">
-          <div class="profile-field">
-            <span class="label">Email</span>
-            <span id="profile-email">尚未登入</span>
-          </div>
-
-          <div class="profile-field">
-            <span class="label">暱稱</span>
-            <input
-              id="profile-display-name"
-              type="text"
-              placeholder="登入後可設定暱稱"
-            />
-          </div>
-
-          <div class="profile-field">
-            <span class="label">自我介紹</span>
-            <textarea
-              id="profile-bio"
-              rows="3"
-              placeholder="寫點什麼關於你自己（可選）"
-            ></textarea>
-          </div>
-        </div>
-
-        <button id="btn-save-profile">儲存個人頁</button>
-        <p id="profile-status"></p>
-      </section>
-
+      
       <!-- 新聞區：嵌入你的 news-site -->
       <section class="card">
         <h2>Telos 新聞中心</h2>
@@ -216,6 +183,72 @@
       <p class="auth-error" id="auth-error"></p>
     </div>
   </div>
+  <!-- Profile Modal（個人資料 + 好友） -->
+  <div class="modal-backdrop hidden" id="profile-modal-backdrop">
+    <div class="modal" id="profile-modal">
+      <button class="modal-close" id="profile-modal-close">✕</button>
+      <h2>個人資料</h2>
+
+      <form id="profile-form">
+        <div class="field">
+          <span>顯示名稱</span>
+          <input
+            type="text"
+            id="profile-name"
+            placeholder="例如：祐子"
+          />
+        </div>
+
+        <div class="field">
+          <span>性別</span>
+          <select id="profile-gender">
+            <option value="">不公開</option>
+            <option value="female">女</option>
+            <option value="male">男</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <span>頭貼</span>
+          <input type="file" id="profile-avatar" accept="image/*" />
+          <div class="avatar-preview">
+            <img id="profile-avatar-preview" alt="頭貼預覽" />
+          </div>
+        </div>
+
+        <div class="field">
+          <span>簡介</span>
+          <textarea
+            id="profile-bio"
+            rows="3"
+            placeholder="寫一小段關於你自己的介紹"
+          ></textarea>
+        </div>
+
+        <button type="submit" id="profile-save-btn">儲存個人資料</button>
+        <p class="profile-status" id="profile-status"></p>
+      </form>
+
+      <hr class="profile-divider" />
+
+      <h3 class="friends-title">好友</h3>
+      <div class="field">
+        <span>用 Email 加好友</span>
+        <input
+          type="email"
+          id="friend-email"
+          placeholder="對方的 Telos email"
+        />
+        <button type="button" id="friend-add-btn">加好友</button>
+        <p class="auth-error" id="friend-error"></p>
+      </div>
+
+      <ul id="friends-list" class="friends-list"></ul>
+    </div>
+  </div>
+
+  
 
   <!-- Firebase + 主程式 -->
  <script type="module" src="telos-main.js"></script>

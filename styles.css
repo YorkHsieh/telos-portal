@@ -358,6 +358,67 @@ body {
   font-size: 0.78rem;
   color: var(--text-sub);
 }
+/* 個人頭貼預覽 */
+
+.avatar-preview {
+  margin-top: 6px;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 好友列表 */
+
+.profile-divider {
+  margin: 12px 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.friends-title {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+}
+
+.friends-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.friends-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.friends-list li span {
+  display: block;
+}
+
+.friends-list .friend-name {
+  font-weight: 600;
+}
+
+.friends-list .friend-email {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+}
+
 
 /* 新聞 iframe */
 

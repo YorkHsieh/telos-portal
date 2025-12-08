@@ -1,4 +1,4 @@
-// tools.js
+// telos-tools.js
 export function initToolsPanel() {
   const toolsBtn = document.getElementById("tools-button");
   const toolsPanel = document.getElementById("tools-panel");
@@ -16,12 +16,15 @@ export function initToolsPanel() {
     toolsPanel.classList.remove("open");
   });
 
-  // tool-item 的額外行為（帳號中心）
-  document.querySelectorAll(".tool-item[data-tool='account']").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById("user-panel")?.scrollIntoView({
-        behavior: "smooth",
+  // tool-item：帳號中心 → 發事件給 profile 模組
+  document
+    .querySelectorAll(".tool-item[data-tool='account']")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("open-profile"));
+        toolsPanel.classList.remove("open");
       });
     });
-  });
+
+  // chat 按鈕 / 設定 按鈕照舊，可按需要再加
 }
