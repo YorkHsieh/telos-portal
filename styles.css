@@ -591,11 +591,12 @@ body {
 
 .chat-window {
   flex: 1;
-  display: none;
+  display: flex;        /* ← 原本是 display: none; */
   flex-direction: column;
   max-height: 340px;
 }
 
+/* 這個可以留著也沒差，但暫時用不到 */
 .chat-window.active {
   display: flex;
 }
