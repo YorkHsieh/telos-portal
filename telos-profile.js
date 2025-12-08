@@ -181,11 +181,12 @@ export function initProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("頭貼檔案太大，請小於 2MB。");
-      avatarInput.value = "";
-      return;
-    }
+if (file.size > 2 * 1024 * 1024) {
+  alert("頭貼檔案太大，請小於 2MB。");
+  avatarInput.value = "";
+  return;
+}
+
 
     const reader = new FileReader();
     reader.onload = () => {
