@@ -47,11 +47,7 @@
           </div>
 
           <!-- 工具按鈕（不規則 3x3 點陣） -->
-          <button
-            class="tools-button"
-            id="tools-button"
-            aria-label="Telos 工具"
-          >
+          <button class="tools-button" id="tools-button" aria-label="Telos 工具">
             <span class="tools-dot-row">
               <span class="tools-dot"></span>
               <span class="tools-dot"></span>
@@ -79,9 +75,7 @@
         <p id="user-status">
           目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。
         </p>
-        <button id="btn-edit-profile" class="hidden">
-          快速修改暱稱
-        </button>
+        <button id="btn-edit-profile" class="hidden">快速修改暱稱</button>
       </section>
 
       <!-- 個人頁 Profile -->
@@ -92,7 +86,7 @@
         <div class="profile-row">
           <div class="profile-field">
             <span class="label">Email</span>
-            <span id="profile-email" class="profile-email">尚未登入</span>
+            <span id="profile-email">尚未登入</span>
           </div>
 
           <div class="profile-field">
@@ -115,7 +109,7 @@
         </div>
 
         <button id="btn-save-profile">儲存個人頁</button>
-        <p class="profile-status" id="profile-status"></p>
+        <p id="profile-status"></p>
       </section>
 
       <!-- 新聞區：嵌入你的 news-site -->
@@ -127,8 +121,7 @@
             href="https://yorkhsieh.github.io/news-site/"
             target="_blank"
             rel="noopener noreferrer"
-            >https://yorkhsieh.github.io/news-site/</a
-          >
+          >https://yorkhsieh.github.io/news-site/</a>
         </p>
         <div class="news-frame-wrapper">
           <iframe
@@ -148,19 +141,21 @@
           <div class="tool-icon bubble">💬</div>
           <div class="tool-label">訊息</div>
         </button>
+
         <a
           class="tool-item"
           href="https://yorkhsieh.github.io/news-site/"
           target="_blank"
-          rel="noopener noreferrer"
         >
           <div class="tool-icon">📰</div>
           <div class="tool-label">新聞中心</div>
         </a>
+
         <button class="tool-item" data-tool="account">
           <div class="tool-icon">👤</div>
           <div class="tool-label">帳號中心</div>
         </button>
+
         <button class="tool-item" data-tool="settings">
           <div class="tool-icon">⚙️</div>
           <div class="tool-label">設定</div>
@@ -169,56 +164,27 @@
       <p class="tools-hint">之後可以在這裡慢慢加更多 Telos 服務。</p>
     </div>
 
-    <!-- 右下角浮動聊天室：對話列表 + 訊息區 -->
+    <!-- 右下角浮動聊天室：公共聊天室 -->
     <div class="chat-float" id="chat-float">
       <div class="chat-header">
         <span>Telos 訊息</span>
-        <div class="chat-header-actions">
-          <button id="btn-new-chat" title="建立新對話">＋</button>
-          <button class="chat-close" id="chat-close" aria-label="關閉聊天室">
-            ✕
-          </button>
-        </div>
+        <button class="chat-close" id="chat-close">✕</button>
       </div>
 
-      <div class="chat-body">
-        <!-- 左側：對話列表 -->
-        <div class="chat-sidebar">
-          <div class="chat-sidebar-header">對話</div>
-          <div class="chat-thread-list" id="chat-thread-list">
-            <!-- 動態插入 -->
-          </div>
-        </div>
-
-        <!-- 右側：訊息區 -->
-        <div class="chat-main">
-          <div class="chat-main-empty" id="chat-main-empty">
-            選擇一個對話，或按左上角「＋」建立新的個人 / 群組對話。
-          </div>
-
-          <div class="chat-window" id="chat-window">
-            <div class="chat-messages" id="chat-messages"></div>
-            <form class="chat-input-row" id="chat-form">
-              <input
-                type="text"
-                id="chat-input"
-                placeholder="請先登入並選擇對話"
-                disabled
-              />
-              <button type="submit" disabled>送出</button>
-            </form>
-          </div>
-        </div>
+      <div class="chat-window">
+        <div class="chat-messages" id="chat-messages"></div>
+        <form class="chat-input-row" id="chat-form">
+          <input type="text" id="chat-input" placeholder="請先登入" disabled />
+          <button type="submit" disabled>送出</button>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- Auth Modal（登入 / 註冊共用） -->
+  <!-- Auth Modal（登入 / 註冊） -->
   <div class="modal-backdrop hidden" id="auth-modal-backdrop">
-    <div class="modal" id="auth-modal">
-      <button class="modal-close" id="auth-modal-close" aria-label="關閉">
-        ✕
-      </button>
+    <div class="modal">
+      <button class="modal-close" id="auth-modal-close">✕</button>
       <h2 id="auth-modal-title">登入 Telos</h2>
 
       <form id="auth-form">
@@ -235,11 +201,7 @@
         <div id="signup-extra" class="hidden">
           <label class="field">
             <span>暱稱</span>
-            <input
-              type="text"
-              id="auth-display-name"
-              placeholder="選填，例如：祐子"
-            />
+            <input type="text" id="auth-display-name" />
           </label>
         </div>
 
@@ -248,60 +210,10 @@
 
       <p class="modal-switch">
         <span id="auth-switch-to-signup">還沒有帳號？建立 Telos 帳號</span>
-        <span id="auth-switch-to-login" class="hidden"
-          >已經有帳號？改成登入</span
-        >
+        <span id="auth-switch-to-login" class="hidden">已經有帳號？改成登入</span>
       </p>
 
       <p class="auth-error" id="auth-error"></p>
-    </div>
-  </div>
-
-  <!-- 新對話 Modal -->
-  <div class="modal-backdrop hidden" id="chat-new-modal-backdrop">
-    <div class="modal" id="chat-new-modal">
-      <button class="modal-close" id="chat-new-close" aria-label="關閉">
-        ✕
-      </button>
-      <h2>建立新對話</h2>
-
-      <div class="field">
-        <span>類型</span>
-        <div class="radio-row">
-          <label>
-            <input
-              type="radio"
-              name="chat-type"
-              value="direct"
-              checked
-            />個人對話
-          </label>
-          <label>
-            <input type="radio" name="chat-type" value="group" />群組對話
-          </label>
-        </div>
-      </div>
-
-      <div class="field">
-        <span id="chat-target-label">對方 Email</span>
-        <input
-          type="text"
-          id="chat-target"
-          placeholder="例如：friend@example.com（群組可用逗號分隔多個）"
-        />
-      </div>
-
-      <div class="field" id="chat-group-name-row" style="display: none;">
-        <span>群組名稱</span>
-        <input
-          type="text"
-          id="chat-group-name"
-          placeholder="例如：物理小組聊天"
-        />
-      </div>
-
-      <button id="chat-new-submit">建立對話</button>
-      <p class="auth-error" id="chat-new-error"></p>
     </div>
   </div>
 
