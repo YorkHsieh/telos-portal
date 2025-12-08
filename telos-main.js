@@ -1,4 +1,5 @@
-// main.js
+// telos-main.js — 啟動 Telos
+
 import { initAuthUI } from "./telos-auth.js";
 import { initChat } from "./telos-chat.js";
 import { initToolsPanel } from "./telos-tools.js";

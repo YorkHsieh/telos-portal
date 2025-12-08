@@ -1,4 +1,5 @@
-// telos-tools.js
+// telos-tools.js — 九宮格工具面板
+
 export function initToolsPanel() {
   const toolsBtn = document.getElementById("tools-button");
   const toolsPanel = document.getElementById("tools-panel");
@@ -16,15 +17,19 @@ export function initToolsPanel() {
     toolsPanel.classList.remove("open");
   });
 
-  // tool-item：帳號中心 → 發事件給 profile 模組
+  // 帳號中心 → 發事件讓 profile 模組打開個人頁 modal
   document
     .querySelectorAll(".tool-item[data-tool='account']")
     .forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.dispatchEvent(new CustomEvent("open-profile"));
+        document
+          .getElementById("user-panel")
+          ?.scrollIntoView({ behavior: "smooth" });
+        const ev = new Event("open-profile");
+        document.dispatchEvent(ev);
         toolsPanel.classList.remove("open");
       });
     });
 
-  // chat 按鈕 / 設定 按鈕照舊，可按需要再加
+  // 訊息按鈕（chat）也在 chat 模組裡會另外處理開關
 }

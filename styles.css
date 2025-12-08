@@ -303,123 +303,6 @@ body {
   color: var(--text-sub);
 }
 
-/* 個人頁 */
-
-.profile-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.profile-field {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.85rem;
-}
-
-.profile-field .label {
-  margin-bottom: 2px;
-  color: var(--text-sub);
-}
-
-.profile-email {
-  word-break: break-all;
-}
-
-#profile-display-name,
-#profile-bio {
-  border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-  padding: 7px 9px;
-  font-size: 0.85rem;
-}
-
-#profile-bio {
-  resize: vertical;
-}
-
-#btn-save-profile {
-  border-radius: 999px;
-  border: none;
-  padding: 7px 16px;
-  font-size: 0.85rem;
-  background: var(--telos-blue);
-  color: #ffffff;
-  cursor: pointer;
-}
-
-#btn-save-profile:hover {
-  background: var(--telos-blue-dark);
-}
-
-.profile-status {
-  margin-top: 4px;
-  font-size: 0.78rem;
-  color: var(--text-sub);
-}
-/* 個人頭貼預覽 */
-
-.avatar-preview {
-  margin-top: 6px;
-  width: 72px;
-  height: 72px;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-}
-
-.avatar-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* 好友列表 */
-
-.profile-divider {
-  margin: 12px 0;
-  border: none;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.friends-title {
-  margin: 0 0 6px;
-  font-size: 0.9rem;
-}
-
-.friends-list {
-  list-style: none;
-  padding: 0;
-  margin: 6px 0 0;
-  max-height: 180px;
-  overflow-y: auto;
-  font-size: 0.85rem;
-}
-
-.friends-list li {
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
-}
-
-.friends-list li span {
-  display: block;
-}
-
-.friends-list .friend-name {
-  font-weight: 600;
-}
-
-.friends-list .friend-email {
-  font-size: 0.75rem;
-  color: var(--text-sub);
-}
-
-
 /* 新聞 iframe */
 
 .news-frame-wrapper {
@@ -514,7 +397,7 @@ body {
   text-align: right;
 }
 
-/* ===== 浮動聊天室：新版 layout ===== */
+/* ===== 浮動聊天室：對話列表 + 訊息 ===== */
 
 .chat-float {
   position: fixed;
@@ -652,12 +535,11 @@ body {
 
 .chat-window {
   flex: 1;
-  display: flex;        /* ← 原本是 display: none; */
+  display: none;
   flex-direction: column;
   max-height: 340px;
 }
 
-/* 這個可以留著也沒差，但暫時用不到 */
 .chat-window.active {
   display: flex;
 }
@@ -736,7 +618,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ===== Auth / 新對話 Modal ===== */
+/* ===== Modal 共用 ===== */
 
 .modal-backdrop {
   position: fixed;
@@ -748,14 +630,13 @@ body {
   z-index: 300;
 }
 
-/* 修正：加了 hidden 就強制關閉 modal */
 .modal-backdrop.hidden {
   display: none !important;
 }
 
 .modal {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   background: #ffffff;
   border-radius: 18px;
   padding: 16px 18px 18px;
@@ -792,7 +673,8 @@ body {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   border-radius: 999px;
   border: 1px solid var(--border-subtle);
   padding: 7px 10px;
@@ -801,11 +683,14 @@ body {
 
 .field textarea {
   border-radius: 10px;
+  resize: vertical;
 }
 
 #auth-submit,
-#chat-new-submit {
-  width: 100%;
+#chat-new-submit,
+#profile-save-btn,
+#friend-add-btn,
+#post-submit-btn {
   border-radius: 999px;
   border: none;
   padding: 8px 12px;
@@ -817,7 +702,10 @@ body {
 }
 
 #auth-submit:hover,
-#chat-new-submit:hover {
+#chat-new-submit:hover,
+#profile-save-btn:hover,
+#friend-add-btn:hover,
+#post-submit-btn:hover {
   background: var(--telos-blue-dark);
 }
 
@@ -850,6 +738,139 @@ body {
   font-size: 0.8rem;
 }
 
+/* ===== Profile / Friend / Posts ===== */
+
+.profile-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.profile-id-display {
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--border-subtle);
+  font-size: 0.85rem;
+  background: #f9fafb;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.profile-status {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.friends-title,
+.posts-title {
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.friends-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.friends-list li {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.friends-list li:last-child {
+  border-bottom: none;
+}
+
+.friends-list li:hover {
+  background: #f1f5f9;
+}
+
+.friend-name {
+  font-weight: 600;
+}
+
+.friend-email {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+}
+
+/* 貼文牆 */
+
+.posts-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.posts-list li {
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.posts-list li:last-child {
+  border-bottom: none;
+}
+
+.post-meta {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+}
+
+.post-text {
+  white-space: pre-wrap;
+}
+
+/* Friend modal */
+
+.friend-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.friend-modal-id,
+.friend-modal-email,
+.friend-modal-status {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.friend-modal-bio {
+  margin-top: 4px;
+}
+
 /* RWD */
 
 @media (max-width: 768px) {
@@ -877,5 +898,12 @@ body {
 
   .chat-main {
     height: 60%;
+  }
+
+  .chat-float {
+    width: 100%;
+    right: 0;
+    bottom: 0;
+    border-radius: 16px 16px 0 0;
   }
 }
