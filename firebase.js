@@ -1,10 +1,8 @@
 // firebase.js
-// 專門管 Firebase 初始化，其他檔案只要 import auth 就好
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// 你的專案設定
 const firebaseConfig = {
   apiKey: "AIzaSyCFk0JLo3sAfd1ZCMJ7hb6Sm1MpWmjPpJ0",
   authDomain: "telos-77f73.firebaseapp.com",
@@ -17,5 +15,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-export { app, auth };
+export { app, auth, db };
