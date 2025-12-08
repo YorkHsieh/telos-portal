@@ -1,4 +1,4 @@
-// telos-profile.js — 個人資料 + 好友系統
+// telos-profile.js — 個人資料 + 好友系統（Telos ID 版）
 
 import { auth, db } from "./firebase.js";
 import {
@@ -23,6 +23,7 @@ export function initProfile() {
   const closeBtn = document.getElementById("profile-modal-close");
 
   const form = document.getElementById("profile-form");
+  const idDisplay = document.getElementById("profile-id");
   const nameInput = document.getElementById("profile-name");
   const genderSelect = document.getElementById("profile-gender");
   const avatarInput = document.getElementById("profile-avatar");
@@ -31,7 +32,7 @@ export function initProfile() {
   const saveBtn = document.getElementById("profile-save-btn");
   const status = document.getElementById("profile-status");
 
-  const friendEmailInput = document.getElementById("friend-email");
+  const friendIdInput = document.getElementById("friend-id");
   const friendAddBtn = document.getElementById("friend-add-btn");
   const friendError = document.getElementById("friend-error");
   const friendsList = document.getElementById("friends-list");
@@ -40,12 +41,15 @@ export function initProfile() {
     !backdrop ||
     !modal ||
     !form ||
+    !idDisplay ||
     !nameInput ||
     !genderSelect ||
     !avatarInput ||
     !avatarPreview ||
     !bioInput ||
     !saveBtn ||
+    !friendIdInput ||
+    !friendAddBtn ||
     !friendsList
   ) {
     console.warn("Profile DOM not ready.");
@@ -53,6 +57,7 @@ export function initProfile() {
   }
 
   let currentAvatarDataUrl = "";
+  let currentTelosId = "";
 
   // ===== 開 / 關 modal =====
   function openProfileModal() {
@@ -80,6 +85,13 @@ export function initProfile() {
     if (e.target === backdrop) closeProfileModal();
   });
 
+  // ===== 產生 Telos ID（用 uid 做 deterministic ID）=====
+  function generateTelosIdFromUid(uid) {
+    // 去掉奇怪字元，只留英數，截 8 碼，再加 T 前綴
+    const clean = uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    return "T" + clean.slice(0, 8);
+  }
+
   // ===== 載入 Firestore 裡的 user profile =====
   async function loadUserProfile(user) {
     try {
@@ -101,12 +113,26 @@ export function initProfile() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
-        await setDoc(userRef, data);
+        await setDoc(userRef, data, { merge: true });
       }
+
+      // Telos ID：如果沒有，就用 uid 生成一個後存回去
+      let telosId = data.telosId;
+      if (!telosId) {
+        telosId = generateTelosIdFromUid(user.uid);
+        await setDoc(
+          userRef,
+          { telosId, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      }
+      currentTelosId = telosId;
+      idDisplay.textContent = telosId;
 
       nameInput.value = data.name || user.displayName || "";
       genderSelect.value = data.gender || "";
       bioInput.value = data.bio || "";
+
       currentAvatarDataUrl = data.avatarDataUrl || "";
       if (currentAvatarDataUrl) {
         avatarPreview.src = currentAvatarDataUrl;
@@ -125,20 +151,24 @@ export function initProfile() {
     friendsList.innerHTML = "";
     if (!friends || friends.length === 0) {
       const li = document.createElement("li");
-      li.textContent = "目前還沒有好友。可以用 Email 加好友。";
+      li.textContent = "目前還沒有好友。可以用 Telos ID 加好友。";
       friendsList.appendChild(li);
       return;
     }
 
     friends.forEach((f) => {
       const li = document.createElement("li");
+
       const nameSpan = document.createElement("span");
       nameSpan.className = "friend-name";
       nameSpan.textContent = f.name || f.email || "(無名稱)";
 
       const emailSpan = document.createElement("span");
       emailSpan.className = "friend-email";
-      emailSpan.textContent = f.email || "";
+      const parts = [];
+      if (f.telosId) parts.push(f.telosId);
+      if (f.email) parts.push(f.email);
+      emailSpan.textContent = parts.join(" · ");
 
       li.appendChild(nameSpan);
       li.appendChild(emailSpan);
@@ -191,52 +221,58 @@ export function initProfile() {
       await updateProfile(user, { displayName: name });
 
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        name,
-        gender,
-        bio,
-        avatarDataUrl: currentAvatarDataUrl || "",
-        updatedAt: serverTimestamp(),
-      });
+      await setDoc(
+        userRef,
+        {
+          email: user.email || "",
+          telosId: currentTelosId || generateTelosIdFromUid(user.uid),
+          name,
+          gender,
+          bio,
+          avatarDataUrl: currentAvatarDataUrl || "",
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
       status.textContent = "已儲存。";
     } catch (err) {
-      console.error(err);
+      console.error("儲存 profile 失敗：", err);
       status.textContent = "儲存失敗。";
     } finally {
       saveBtn.disabled = false;
     }
   });
 
-  // ===== 好友功能：用 Email 加好友 =====
-  friendAddBtn?.addEventListener("click", async () => {
+  // ===== 好友功能：用 Telos ID 加好友 =====
+  friendAddBtn.addEventListener("click", async () => {
     const user = auth.currentUser;
     if (!user) {
       alert("請先登入。");
       return;
     }
 
-    const email = friendEmailInput.value.trim();
+    const input = friendIdInput.value.trim().toUpperCase();
     friendError.textContent = "";
 
-    if (!email) {
-      friendError.textContent = "請輸入對方的 email。";
+    if (!input) {
+      friendError.textContent = "請輸入對方的 Telos ID。";
       return;
     }
 
-    if (email === (user.email || "")) {
+    if (input === currentTelosId) {
       friendError.textContent = "不能加自己當好友啦。";
       return;
     }
 
     try {
-      // 用 email 找對方
       const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
+      const q = query(usersRef, where("telosId", "==", input));
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        friendError.textContent = "找不到這個 email 的 Telos 使用者。";
+        friendError.textContent = "找不到這個 Telos ID。";
         return;
       }
 
@@ -251,12 +287,19 @@ export function initProfile() {
         user.email ||
         "使用者";
 
+      const myTelosId =
+        currentTelosId || generateTelosIdFromUid(user.uid);
+
+      const friendTelosId =
+        friendData.telosId || generateTelosIdFromUid(friendDoc.id);
+
       // 互相加到好友清單（簡單版：arrayUnion）
       await updateDoc(myRef, {
         friends: arrayUnion({
           uid: friendDoc.id,
-          email: friendData.email || email,
-          name: friendData.name || friendData.displayName || email,
+          email: friendData.email || "",
+          name: friendData.name || friendData.displayName || friendData.email || input,
+          telosId: friendTelosId,
         }),
         updatedAt: serverTimestamp(),
       });
@@ -266,18 +309,19 @@ export function initProfile() {
           uid: user.uid,
           email: user.email || "",
           name: myDisplayName,
+          telosId: myTelosId,
         }),
         updatedAt: serverTimestamp(),
       });
 
-      friendEmailInput.value = "";
+      friendIdInput.value = "";
       friendError.textContent = "";
       status.textContent = "已加入好友。";
 
       // 重新載入好友列表
       await loadUserProfile(user);
     } catch (err) {
-      console.error(err);
+      console.error("加好友失敗：", err);
       friendError.textContent = "加好友失敗，稍後再試。";
     }
   });

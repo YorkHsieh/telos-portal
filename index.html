@@ -191,6 +191,11 @@
 
       <form id="profile-form">
         <div class="field">
+          <span>我的 Telos ID</span>
+          <div id="profile-id" class="profile-id-display">（登入後產生）</div>
+        </div>
+
+        <div class="field">
           <span>顯示名稱</span>
           <input
             type="text"
@@ -198,6 +203,7 @@
             placeholder="例如：祐子"
           />
         </div>
+
 
         <div class="field">
           <span>性別</span>
@@ -234,17 +240,18 @@
 
       <h3 class="friends-title">好友</h3>
       <div class="field">
-        <span>用 Email 加好友</span>
+        <span>用 Telos ID 加好友</span>
         <input
-          type="email"
-          id="friend-email"
-          placeholder="對方的 Telos email"
+          type="text"
+          id="friend-id"
+          placeholder="例如：TABC1234"
         />
         <button type="button" id="friend-add-btn">加好友</button>
         <p class="auth-error" id="friend-error"></p>
       </div>
 
       <ul id="friends-list" class="friends-list"></ul>
+
     </div>
   </div>
 
