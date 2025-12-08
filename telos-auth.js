@@ -1,124 +1,212 @@
-// telos-auth.js — 登入 / 註冊 Modal + Firebase Auth
+// telos-auth.js — 登入 / 註冊 UI + Firebase Auth + 建立 Firestore 使用者文件
 
 import { auth, db } from "./firebase.js";
 import {
+  onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
   updateProfile,
+  signOut,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import {
+  doc,
+  setDoc,
+  serverTimestamp,
+  getDoc,
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 export function initAuthUI() {
-  const loginBtn = document.getElementById("btn-login");
-  const logoutBtn = document.getElementById("btn-logout");
+  console.log("Auth UI init");
 
-  const modalBackdrop = document.getElementById("auth-modal-backdrop");
-  const modal = document.getElementById("auth-modal");
-  const closeBtn = document.getElementById("auth-modal-close");
-  const title = document.getElementById("auth-modal-title");
+  // ===== 頂部帳號區 =====
+  const btnLogin = document.getElementById("btn-login");
+  const btnLogout = document.getElementById("btn-logout");
+  const userStatus = document.getElementById("user-status");
+  const btnEditProfile = document.getElementById("btn-edit-profile");
 
-  const emailInput = document.getElementById("auth-email");
-  const passwordInput = document.getElementById("auth-password");
-  const displayNameInput = document.getElementById("auth-display-name");
+  // ===== Auth Modal 元件 =====
+  const authModalBackdrop = document.getElementById("auth-modal-backdrop");
+  const authModal = document.getElementById("auth-modal");
+  const authModalClose = document.getElementById("auth-modal-close");
+  const authModalTitle = document.getElementById("auth-modal-title");
 
+  const authForm = document.getElementById("auth-form");
+  const authEmail = document.getElementById("auth-email");
+  const authPassword = document.getElementById("auth-password");
+  const authDisplayName = document.getElementById("auth-display-name");
   const signupExtra = document.getElementById("signup-extra");
-  const errorMsg = document.getElementById("auth-error");
-  const submitBtn = document.getElementById("auth-submit");
+  const authSubmit = document.getElementById("auth-submit");
+  const authError = document.getElementById("auth-error");
+  const switchToSignup = document.getElementById("auth-switch-to-signup");
+  const switchToLogin = document.getElementById("auth-switch-to-login");
 
-  const switchSignup = document.getElementById("auth-switch-to-signup");
-  const switchLogin = document.getElementById("auth-switch-to-login");
-
-  let mode = "login";
-
-  function openModal() {
-    modalBackdrop.classList.remove("hidden");
-    modalBackdrop.style.display = "flex";
-    errorMsg.textContent = "";
+  // 防呆：DOM 沒載好就不要動
+  if (
+    !btnLogin ||
+    !btnLogout ||
+    !userStatus ||
+    !authModalBackdrop ||
+    !authModal ||
+    !authModalTitle ||
+    !authForm ||
+    !authEmail ||
+    !authPassword ||
+    !authSubmit ||
+    !authError ||
+    !switchToSignup ||
+    !switchToLogin
+  ) {
+    console.warn("Auth DOM not ready, skip initAuthUI");
+    return;
   }
 
-  function closeModal() {
-    modalBackdrop.classList.add("hidden");
-    modalBackdrop.style.display = "none";
+  let mode = "login"; // "login" 或 "signup"
+
+  // ===== 打開 / 關閉 Modal =====
+  function openAuthModal(nextMode = "login") {
+    mode = nextMode;
+    authError.textContent = "";
+
+    if (mode === "login") {
+      authModalTitle.textContent = "登入 Telos";
+      authSubmit.textContent = "登入";
+      signupExtra.classList.add("hidden");
+      switchToSignup.classList.remove("hidden");
+      switchToLogin.classList.add("hidden");
+    } else {
+      authModalTitle.textContent = "建立 Telos 帳號";
+      authSubmit.textContent = "註冊";
+      signupExtra.classList.remove("hidden");
+      switchToSignup.classList.add("hidden");
+      switchToLogin.classList.remove("hidden");
+    }
+
+    authModalBackdrop.classList.remove("hidden");
+    authModalBackdrop.style.display = "flex";
   }
 
-  loginBtn?.addEventListener("click", openModal);
-  closeBtn?.addEventListener("click", closeModal);
-  modalBackdrop.addEventListener("click", (e) => {
-    if (e.target === modalBackdrop) closeModal();
+  function closeAuthModal() {
+    authModalBackdrop.classList.add("hidden");
+    authModalBackdrop.style.display = "none";
+  }
+
+  // ===== 頂部按鈕行為 =====
+  btnLogin.addEventListener("click", () => openAuthModal("login"));
+
+  btnLogout.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("登出失敗：", err);
+    }
   });
 
-  switchSignup.addEventListener("click", () => {
-    mode = "signup";
-    title.textContent = "建立帳號";
-    signupExtra.classList.remove("hidden");
-    switchSignup.classList.add("hidden");
-    switchLogin.classList.remove("hidden");
-    submitBtn.textContent = "註冊";
+  authModalClose?.addEventListener("click", closeAuthModal);
+  authModalBackdrop.addEventListener("click", (e) => {
+    if (e.target === authModalBackdrop) closeAuthModal();
   });
 
-  switchLogin.addEventListener("click", () => {
-    mode = "login";
-    title.textContent = "登入 Telos";
-    signupExtra.classList.add("hidden");
-    switchSignup.classList.remove("hidden");
-    switchLogin.classList.add("hidden");
-    submitBtn.textContent = "登入";
-  });
+  switchToSignup.addEventListener("click", () => openAuthModal("signup"));
+  switchToLogin.addEventListener("click", () => openAuthModal("login"));
 
-  submitBtn.addEventListener("submit", (e) => e.preventDefault());
+  // ===== 表單送出（登入 / 註冊） =====
+  authForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    authError.textContent = "";
 
-  // 登入 / 註冊提交
-  submitBtn.addEventListener("click", async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    const displayName = displayNameInput.value.trim();
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    const displayName = authDisplayName
+      ? authDisplayName.value.trim()
+      : "";
 
-    errorMsg.textContent = "";
+    if (!email || !password) {
+      authError.textContent = "請輸入 Email 與密碼。";
+      return;
+    }
+
+    authSubmit.disabled = true;
 
     try {
       if (mode === "login") {
+        // ===== 登入 =====
         await signInWithEmailAndPassword(auth, email, password);
-        closeModal();
-        return;
+        closeAuthModal();
+      } else {
+        // ===== 註冊 =====
+        const cred = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        if (displayName) {
+          await updateProfile(cred.user, { displayName });
+        }
+
+        // 在 Firestore 建一筆對應的 user 文件（給 profile 用）
+        const userRef = doc(db, "users", cred.user.uid);
+        const existing = await getDoc(userRef);
+        if (!existing.exists()) {
+          await setDoc(userRef, {
+            email,
+            name: displayName || "",
+            gender: "",
+            bio: "",
+            avatarDataUrl: "",
+            friends: [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+
+        closeAuthModal();
       }
-
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-
-      if (displayName) {
-        await updateProfile(cred.user, { displayName });
-      }
-
-      await setDoc(doc(db, "users", cred.user.uid), {
-        email,
-        name: displayName || "",
-        gender: "",
-        bio: "",
-        avatarDataUrl: "",
-        friends: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      closeModal();
     } catch (err) {
-      errorMsg.textContent = err.message;
+      console.error("Auth error:", err);
+      let msg = "發生錯誤，請稍後再試。";
+
+      if (
+        err.code === "auth/invalid-credential" ||
+        err.code === "auth/wrong-password"
+      ) {
+        msg = "帳號或密碼錯誤。";
+      } else if (err.code === "auth/user-not-found") {
+        msg = "找不到這個帳號。";
+      } else if (err.code === "auth/email-already-in-use") {
+        msg = "這個 Email 已經註冊過了。";
+      } else if (err.code === "auth/weak-password") {
+        msg = "密碼至少 6 碼。";
+      }
+
+      authError.textContent = msg;
+    } finally {
+      authSubmit.disabled = false;
     }
   });
 
-  logoutBtn?.addEventListener("click", async () => {
-    await signOut(auth);
+  // ===== 快速修改暱稱 → 直接打開 Profile Modal =====
+  btnEditProfile?.addEventListener("click", () => {
+    const ev = new Event("open-profile");
+    document.dispatchEvent(ev);
   });
 
-  // login/logout UI 更新
+  // ===== 監聽登入狀態，更新 UI =====
   onAuthStateChanged(auth, (user) => {
-    if (user) {
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
+    if (!user) {
+      btnLogin.classList.remove("hidden");
+      btnLogout.classList.add("hidden");
+      btnEditProfile?.classList.add("hidden");
+      userStatus.textContent =
+        "目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。";
       return;
     }
-    loginBtn.classList.remove("hidden");
-    logoutBtn.classList.add("hidden");
+
+    btnLogin.classList.add("hidden");
+    btnLogout.classList.remove("hidden");
+    btnEditProfile?.classList.remove("hidden");
+
+    const name = user.displayName || user.email || "使用者";
+    userStatus.textContent = `Hi，${name}，歡迎回到 Telos。`;
   });
 }
