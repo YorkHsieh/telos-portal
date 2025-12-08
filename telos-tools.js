@@ -17,19 +17,11 @@ export function initToolsPanel() {
     toolsPanel.classList.remove("open");
   });
 
-  // 帳號中心 → 發事件讓 profile 模組打開個人頁 modal
-  document
-    .querySelectorAll(".tool-item[data-tool='account']")
-    .forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document
-          .getElementById("user-panel")
-          ?.scrollIntoView({ behavior: "smooth" });
-        const ev = new Event("open-profile");
-        document.dispatchEvent(ev);
-        toolsPanel.classList.remove("open");
-      });
+  document.querySelectorAll(".tool-item[data-tool='account']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ev = new Event("open-profile");
+      document.dispatchEvent(ev);
+      toolsPanel.classList.remove("open");
     });
-
-  // 訊息按鈕（chat）也在 chat 模組裡會另外處理開關
+  });
 }
