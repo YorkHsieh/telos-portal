@@ -1,8 +1,8 @@
 // main.js
-import { initAuthUI } from "./auth.js";
-import { initChat } from "./chat.js";
-import { initToolsPanel } from "./tools.js";
-import { initProfile } from "./profile.js";
+import { initAuthUI } from "./telos-auth.js";
+import { initChat } from "./telos-chat.js";
+import { initToolsPanel } from "./telos-tools.js";
+import { initProfile } from "./telos-profile.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const splash = document.getElementById("splash");
