@@ -1,6 +1,7 @@
-// telos-auth.js — 登入 / 註冊 UI + Firebase Auth + 建立 Firestore 使用者文件
+// telos-auth.js — 登入 / 註冊 UI + Firebase Auth + 建立 / 修補 Firestore 使用者文件（含 Telos ID）
 
 import { auth, db } from "./firebase.js";
+
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -8,12 +9,83 @@ import {
   updateProfile,
   signOut,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
 import {
   doc,
   setDoc,
   serverTimestamp,
   getDoc,
+  updateDoc,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+// ================== Telos ID 產生器 ==================
+
+function generateTelosIdFromUid(uid) {
+  // 簡單：T + UID 前 7 碼（大寫）
+  return "T" + (uid || "").slice(0, 7).toUpperCase();
+}
+
+/**
+ * 確保 Firestore 裡有 users/{uid} 文件，沒有就建立，
+ * 有但沒 telosId 就補上，順便更新基本資料。
+ */
+async function ensureUserDoc(user, extra = {}) {
+  if (!user) return;
+
+  const userRef = doc(db, "users", user.uid);
+  const snap = await getDoc(userRef);
+
+  const base = {
+    email: user.email || "",
+    name: user.displayName || "",
+    gender: "",
+    bio: "",
+    avatarDataUrl: "",
+    friends: [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (!snap.exists()) {
+    // 全新使用者：直接建一筆，順便給 Telos ID
+    const telosId = generateTelosIdFromUid(user.uid);
+    await setDoc(userRef, {
+      ...base,
+      telosId,
+      ...extra,
+    });
+    console.log("[Auth] Firestore user doc created, telosId =", telosId);
+  } else {
+    // 已存在：只更新必要欄位 & 補 telosId
+    const data = snap.data() || {};
+    const updatePayload = {
+      updatedAt: serverTimestamp(),
+      ...extra,
+    };
+
+    if (!data.telosId) {
+      updatePayload.telosId = generateTelosIdFromUid(user.uid);
+    }
+
+    // 如果 Firestore 內 name / email 是空的，可以用現在的覆蓋
+    if (!data.name && user.displayName) {
+      updatePayload.name = user.displayName;
+    }
+    if (!data.email && user.email) {
+      updatePayload.email = user.email;
+    }
+
+    if (Object.keys(updatePayload).length > 1) {
+      // 至少有 updatedAt + 其他東西才真的 update
+      await updateDoc(userRef, updatePayload);
+      console.log("[Auth] Firestore user doc updated");
+    } else {
+      console.log("[Auth] Firestore user doc already ok");
+    }
+  }
+}
+
+// ================== 主進入點 ==================
 
 export function initAuthUI() {
   console.log("[Auth] initAuthUI() 進來了");
@@ -60,7 +132,7 @@ export function initAuthUI() {
     return;
   }
 
-  // 為了安全，直接關掉瀏覽器預設驗證 + 預設 submit 行為
+  // 關掉瀏覽器預設驗證
   authForm.setAttribute("novalidate", "true");
 
   let mode = "login"; // "login" 或 "signup"
@@ -118,14 +190,12 @@ export function initAuthUI() {
   // ===== 表單送出（登入 / 註冊） =====
   authForm.addEventListener("submit", async (e) => {
     console.log("[Auth] form submit event 觸發");
-    e.preventDefault(); // ⭐ 一定要第一行就擋掉
+    e.preventDefault();
     authError.textContent = "";
 
     const email = authEmail.value.trim();
     const password = authPassword.value;
-    const displayName = authDisplayName
-      ? authDisplayName.value.trim()
-      : "";
+    const displayName = authDisplayName ? authDisplayName.value.trim() : "";
 
     if (!email || !password) {
       authError.textContent = "請輸入 Email 與密碼。";
@@ -140,6 +210,10 @@ export function initAuthUI() {
         // ===== 登入 =====
         const cred = await signInWithEmailAndPassword(auth, email, password);
         console.log("[Auth] login success, uid =", cred.user.uid);
+
+        // ⭐ 登入時也順便確保 Firestore user doc + Telos ID 存在
+        await ensureUserDoc(cred.user);
+
         closeAuthModal();
       } else {
         // ===== 註冊 =====
@@ -154,21 +228,10 @@ export function initAuthUI() {
           await updateProfile(cred.user, { displayName });
         }
 
-        // 在 Firestore 建一筆對應的 user 文件（給 profile 用）
-        const userRef = doc(db, "users", cred.user.uid);
-        const existing = await getDoc(userRef);
-        if (!existing.exists()) {
-          await setDoc(userRef, {
-            email,
-            name: displayName || "",
-            gender: "",
-            bio: "",
-            avatarDataUrl: "",
-            friends: [],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
+        // ⭐ 新註冊的一定建立 / 補好 Firestore user doc + Telos ID
+        await ensureUserDoc(cred.user, {
+          name: displayName || cred.user.displayName || "",
+        });
 
         closeAuthModal();
       }
@@ -194,7 +257,6 @@ export function initAuthUI() {
       authSubmit.disabled = false;
     }
 
-    // 保險再擋一次（雖然到這裡通常不會再觸發原生 submit 了）
     return false;
   });
 
@@ -205,7 +267,7 @@ export function initAuthUI() {
   });
 
   // ===== 監聽登入狀態，更新 UI =====
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     console.log("[Auth] onAuthStateChanged, user =", user?.uid || "null");
 
     if (!user) {
@@ -216,6 +278,9 @@ export function initAuthUI() {
         "目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。";
       return;
     }
+
+    // 保險：只要偵測到登入，就再確保 user doc & Telos ID 好好的
+    await ensureUserDoc(user);
 
     btnLogin.classList.add("hidden");
     btnLogout.classList.remove("hidden");
