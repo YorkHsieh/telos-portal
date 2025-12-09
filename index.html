@@ -2,192 +2,389 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>Telos</title>
+  <title>Telos Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-<div id="splash">
-  <div class="splash-logo">
-    <div class="splash-logo-icon">T</div>
-    <div class="splash-logo-text">TELOS</div>
-    <div class="splash-logo-sub">Connecting</div>
+  <!-- 開場 Logo 畫面（Splash Screen） -->
+  <div id="splash">
+    <div class="splash-logo">
+      <div class="splash-logo-icon">T</div>
+      <div class="splash-logo-text">Telos</div>
+      <div class="splash-logo-sub">Skyline Portal</div>
+    </div>
   </div>
-</div>
 
-<div id="app-main" class="app-main">
-
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-logo">T</div>
-        <div class="brand-name">Telos</div>
-      </div>
-
-      <div class="search-bar">
-        <input type="text" placeholder="搜尋…" />
-        <button>Go</button>
-      </div>
-
-      <div class="topbar-right">
-        <div class="account-actions">
-          <button id="btn-login">登入</button>
-          <button id="btn-logout" class="hidden">登出</button>
-          <button id="btn-edit-profile" class="hidden">個人資料</button>
+  <!-- 主應用內容 -->
+  <div id="app-main" class="app-main">
+    <!-- 頂部導覽列 -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-logo">
+            <span>T</span>
+          </div>
+          <span class="brand-name">Telos</span>
         </div>
 
-        <button id="tools-button" class="tools-button">
-          <div class="tools-dot-row">
-            <div class="tools-dot"></div><div class="tools-dot"></div><div class="tools-dot"></div>
+        <!-- Google 搜尋列 -->
+        <form
+          class="search-bar"
+          action="https://www.google.com/search"
+          method="GET"
+          target="_blank"
+        >
+          <input type="text" name="q" placeholder="在 Google 上搜尋…" />
+          <button type="submit">搜尋</button>
+        </form>
+
+        <!-- 右上角：帳號 + 工具按鈕 -->
+        <div class="topbar-right">
+          <div class="account-actions">
+            <button id="btn-login">登入</button>
+            <button id="btn-logout" class="hidden">登出</button>
           </div>
-          <div class="tools-dot-row offset">
-            <div class="tools-dot"></div><div class="tools-dot"></div><div class="tools-dot"></div>
-          </div>
+
+          <!-- 工具按鈕（不規則 3x3 點陣） -->
+          <button
+            class="tools-button"
+            id="tools-button"
+            aria-label="Telos 工具"
+          >
+            <span class="tools-dot-row">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+            <span class="tools-dot-row offset">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+            <span class="tools-dot-row">
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+              <span class="tools-dot"></span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 使用者狀態 -->
+      <section class="card" id="user-panel">
+        <h2>歡迎來到 Telos</h2>
+        <p id="user-status">
+          目前為遊客模式。登入之後可以聊天、管理個人資料，之後也可以接電子郵件。
+        </p>
+        <button id="btn-edit-profile" class="hidden">
+          快速修改暱稱
+        </button>
+      </section>
+
+      <!-- 新聞區：嵌入你的 news-site -->
+      <section class="card">
+        <h2>Telos 新聞中心</h2>
+        <p class="sub">
+          內容來自：
+          <a
+            href="https://yorkhsieh.github.io/news-site/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >https://yorkhsieh.github.io/news-site/</a
+          >
+        </p>
+        <div class="news-frame-wrapper">
+          <iframe
+            src="https://yorkhsieh.github.io/news-site/"
+            title="Telos News"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+    </main>
+
+    <!-- Telos 工具面板 -->
+    <div class="tools-panel" id="tools-panel">
+      <h3 class="tools-title">Telos 工具</h3>
+      <div class="tools-grid">
+        <button class="tool-item" data-tool="chat">
+          <div class="tool-icon bubble">💬</div>
+          <div class="tool-label">訊息</div>
+        </button>
+        <a
+          class="tool-item"
+          href="https://yorkhsieh.github.io/news-site/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <div class="tool-icon">📰</div>
+          <div class="tool-label">新聞中心</div>
+        </a>
+        <button class="tool-item" data-tool="account">
+          <div class="tool-icon">👤</div>
+          <div class="tool-label">帳號中心</div>
+        </button>
+        <button class="tool-item" data-tool="settings">
+          <div class="tool-icon">⚙️</div>
+          <div class="tool-label">設定</div>
         </button>
       </div>
+      <p class="tools-hint">之後可以在這裡慢慢加更多 Telos 服務。</p>
     </div>
-  </header>
 
-  <div class="page">
-    <div id="user-status" class="card sub">載入中...</div>
+    <!-- 右下角浮動聊天室：對話列表 + 訊息區 -->
+    <div class="chat-float" id="chat-float">
+      <div class="chat-header">
+        <span id="chat-header-title">Telos 訊息</span>
+        <div class="chat-header-actions">
+          <button id="btn-new-chat" title="建立新對話">＋</button>
+          <button class="chat-close" id="chat-close" aria-label="關閉聊天室">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-body">
+        <!-- 左側：對話列表 -->
+        <div class="chat-sidebar">
+          <div class="chat-sidebar-header">對話</div>
+          <div class="chat-thread-list" id="chat-thread-list">
+            <!-- 動態插入 -->
+          </div>
+        </div>
+
+        <!-- 右側：訊息區 -->
+        <div class="chat-main">
+          <div class="chat-main-empty" id="chat-main-empty">
+            選擇一個對話，或按左上角「＋」建立新的個人 / 群組對話。
+          </div>
+
+          <div class="chat-window" id="chat-window">
+            <div class="chat-messages" id="chat-messages"></div>
+            <form class="chat-input-row" id="chat-form">
+              <input
+                type="text"
+                id="chat-input"
+                placeholder="請先登入並選擇對話"
+                disabled
+              />
+              <button type="submit" disabled>送出</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-</div>
+  <!-- Auth Modal（登入 / 註冊） -->
+  <div class="modal-backdrop hidden" id="auth-modal-backdrop">
+    <div class="modal" id="auth-modal">
+      <button class="modal-close" id="auth-modal-close" aria-label="關閉">
+        ✕
+      </button>
+      <h2 id="auth-modal-title">登入 Telos</h2>
 
-<!-- Auth Modal -->
-<div class="modal-backdrop hidden" id="auth-modal-backdrop">
-  <div class="modal" id="auth-modal">
-    <button class="modal-close" id="auth-modal-close">✕</button>
-    <h2 id="auth-modal-title">登入 Telos</h2>
-
-    <form id="auth-form">
-      <label class="field">
-        <span>Email</span>
-        <input type="email" id="auth-email" required />
-      </label>
-
-      <label class="field">
-        <span>密碼</span>
-        <input type="password" id="auth-password" required />
-      </label>
-
-      <div id="signup-extra" class="hidden">
+      <form id="auth-form">
         <label class="field">
-          <span>暱稱</span>
-          <input type="text" id="auth-display-name" />
+          <span>電子郵件</span>
+          <input type="email" id="auth-email" required />
         </label>
+
+        <label class="field">
+          <span>密碼</span>
+          <input type="password" id="auth-password" required minlength="6" />
+        </label>
+
+        <div id="signup-extra" class="hidden">
+          <label class="field">
+            <span>暱稱</span>
+            <input
+              type="text"
+              id="auth-display-name"
+              placeholder="選填，例如：祐子"
+            />
+          </label>
+        </div>
+
+        <button type="submit" id="auth-submit">登入</button>
+      </form>
+
+      <p class="modal-switch">
+        <span id="auth-switch-to-signup">還沒有帳號？建立 Telos 帳號</span>
+        <span id="auth-switch-to-login" class="hidden"
+          >已經有帳號？改成登入</span
+        >
+      </p>
+
+      <p class="auth-error" id="auth-error"></p>
+    </div>
+  </div>
+
+  <!-- Profile Modal（個人資料 + 好友 + 貼文牆） -->
+  <div class="modal-backdrop hidden" id="profile-modal-backdrop">
+    <div class="modal profile-modal" id="profile-modal">
+      <button class="modal-close" id="profile-modal-close" aria-label="關閉">
+        ✕
+      </button>
+      <h2>個人資料</h2>
+
+      <form id="profile-form">
+        <div class="field">
+          <span>我的 Telos ID</span>
+          <div id="profile-id" class="profile-id-display">（登入後產生）</div>
+        </div>
+
+        <div class="field">
+          <span>顯示名稱</span>
+          <input
+            type="text"
+            id="profile-name"
+            placeholder="例如：祐子"
+          />
+        </div>
+
+        <div class="field">
+          <span>性別</span>
+          <select id="profile-gender">
+            <option value="">不顯示</option>
+            <option value="female">女生</option>
+            <option value="male">男生</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <span>頭貼</span>
+          <div class="avatar-row">
+            <img
+              id="profile-avatar-preview"
+              class="avatar-preview"
+              alt="頭貼預覽"
+            />
+            <input type="file" id="profile-avatar" accept="image/*" />
+          </div>
+        </div>
+
+        <div class="field">
+          <span>自我介紹</span>
+          <textarea
+            id="profile-bio"
+            rows="3"
+            placeholder="寫點什麼關於你自己（可選）"
+          ></textarea>
+        </div>
+
+        <button type="submit" id="profile-save-btn">儲存個人資料</button>
+        <p id="profile-status" class="profile-status"></p>
+      </form>
+
+      <h3 class="friends-title">好友</h3>
+      <div class="field">
+        <span>用 Telos ID 加好友</span>
+        <input
+          type="text"
+          id="friend-id"
+          placeholder="例如：TABC1234"
+        />
+        <button type="button" id="friend-add-btn">加好友</button>
+        <p class="auth-error" id="friend-error"></p>
       </div>
 
-      <button id="auth-submit" type="submit">登入</button>
+      <ul id="friends-list" class="friends-list"></ul>
 
-      <div class="auth-error" id="auth-error"></div>
-
-      <div class="modal-switch">
-        <span id="auth-switch-to-login">已有帳號？登入</span>
-        <span id="auth-switch-to-signup">沒有帳號？註冊</span>
+      <h3 class="posts-title">我的貼文牆</h3>
+      <div class="field">
+        <span>發一則貼文</span>
+        <textarea
+          id="post-text"
+          rows="3"
+          placeholder="今天想跟朋友分享什麼？"
+        ></textarea>
+        <button type="button" id="post-submit-btn">發布</button>
+        <p class="auth-error" id="post-error"></p>
       </div>
-    </form>
-  </div>
-</div>
 
-<!-- Profile Modal -->
-<div class="modal-backdrop hidden" id="profile-modal-backdrop">
-  <div class="modal profile-modal" id="profile-modal">
-    <button class="modal-close" id="profile-modal-close">✕</button>
-    <h2>個人資料</h2>
-
-    <div class="field">
-      <span>Telos ID</span>
-      <span id="profile-userid">(登入後會產生)</span>
-    </div>
-
-    <form id="profile-form">
-      <label class="field">
-        <span>顯示名稱</span>
-        <input id="profile-name" />
-      </label>
-
-      <label class="field">
-        <span>性別</span>
-        <select id="profile-gender">
-          <option value="">不顯示</option>
-          <option value="男">男</option>
-          <option value="女">女</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>頭貼</span>
-        <input type="file" id="profile-avatar" />
-        <img id="profile-avatar-preview" class="avatar-preview" />
-      </label>
-
-      <label class="field">
-        <span>自我介紹</span>
-        <textarea id="profile-bio"></textarea>
-      </label>
-
-      <button type="submit" id="profile-save-btn">儲存個人資料</button>
-      <div id="profile-status" class="profile-status"></div>
-    </form>
-
-    <h3 class="friends-title">好友</h3>
-    <label class="field">
-      <span>Telos ID 或 Email</span>
-      <input id="friend-email" />
-    </label>
-    <button id="friend-add-btn">加好友</button>
-    <div id="friend-error" class="auth-error"></div>
-
-    <ul id="friends-list" class="friends-list"></ul>
-  </div>
-</div>
-
-<!-- Tools panel -->
-<div id="tools-panel" class="tools-panel">
-  <div class="tools-title">工具</div>
-  <div class="tools-grid">
-    <button class="tool-item" data-tool="account">
-      <div class="tool-icon bubble">👤</div>
-      <div class="tool-label">個人<br />資料</div>
-    </button>
-
-    <button class="tool-item" data-tool="chat">
-      <div class="tool-icon bubble">💬</div>
-      <div class="tool-label">聊天</div>
-    </button>
-  </div>
-  <div class="tools-hint">點外面關閉</div>
-</div>
-
-<!-- Chat float -->
-<div id="chat-float" class="chat-float">
-  <div class="chat-header">
-    <div id="chat-header-title">Telos 訊息</div>
-    <div class="chat-header-actions">
-      <button id="btn-new-chat">＋</button>
-      <button id="chat-close">✕</button>
+      <ul id="posts-list" class="posts-list"></ul>
     </div>
   </div>
-  <div class="chat-body">
-    <div class="chat-sidebar">
-      <div class="chat-sidebar-header">對話列表</div>
-      <div id="chat-thread-list" class="chat-thread-list"></div>
-    </div>
-    <div class="chat-main">
-      <div id="chat-main-empty" class="chat-main-empty">選擇或建立一個對話</div>
-      <div id="chat-window" class="chat-window">
-        <div id="chat-messages" class="chat-messages"></div>
-        <form id="chat-form" class="chat-input-row">
-          <input id="chat-input" placeholder="輸入訊息…" />
-          <button type="submit">送出</button>
-        </form>
+
+  <!-- Friend Profile Modal（好友個頁） -->
+  <div class="modal-backdrop hidden" id="friend-modal-backdrop">
+    <div class="modal friend-modal" id="friend-modal">
+      <button class="modal-close" id="friend-modal-close" aria-label="關閉">
+        ✕
+      </button>
+      <h2 id="friend-modal-name">好友資料</h2>
+      <div class="friend-modal-body">
+        <img
+          id="friend-modal-avatar"
+          class="avatar-preview"
+          alt="好友頭貼"
+        />
+        <p id="friend-modal-id" class="friend-modal-id"></p>
+        <p id="friend-modal-email" class="friend-modal-email"></p>
+        <p id="friend-modal-status" class="friend-modal-status"></p>
+        <p id="friend-modal-bio" class="friend-modal-bio"></p>
       </div>
     </div>
   </div>
-</div>
 
-<script type="module" src="./telos-main.js"></script>
+  <!-- 新對話 Modal -->
+  <div class="modal-backdrop hidden" id="chat-new-modal-backdrop">
+    <div class="modal" id="chat-new-modal">
+      <button class="modal-close" id="chat-new-close" aria-label="關閉">
+        ✕
+      </button>
+      <h2>建立新對話</h2>
+
+      <div class="field">
+        <span>類型</span>
+        <div class="radio-row">
+          <label>
+            <input
+              type="radio"
+              name="chat-type"
+              value="direct"
+              checked
+            />個人對話
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="chat-type"
+              value="group"
+            />群組對話
+          </label>
+        </div>
+      </div>
+
+      <div class="field" id="chat-target-row">
+        <span id="chat-target-label">好友 Telos ID</span>
+        <input
+          type="text"
+          id="chat-target"
+          placeholder="direct：一個 ID；group：多個 ID 用逗號分隔"
+        />
+      </div>
+
+      <div class="field" id="chat-group-name-row" style="display: none;">
+        <span>群組名稱</span>
+        <input
+          type="text"
+          id="chat-group-name"
+          placeholder="例如：物理小組聊天"
+        />
+      </div>
+
+      <button type="button" id="chat-new-submit">建立對話</button>
+      <p class="auth-error" id="chat-new-error"></p>
+    </div>
+  </div>
+
+  <!-- Firebase + 主程式 -->
+  <script type="module" src="telos-main.js"></script>
 </body>
 </html>
