@@ -16,7 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 export function initAuthUI() {
-  console.log("Auth UI init");
+  console.log("[Auth] initAuthUI() 進來了");
 
   // ===== 頂部帳號區 =====
   const btnLogin = document.getElementById("btn-login");
@@ -56,9 +56,12 @@ export function initAuthUI() {
     !switchToSignup ||
     !switchToLogin
   ) {
-    console.warn("Auth DOM not ready, skip initAuthUI");
+    console.warn("[Auth] DOM not ready, skip initAuthUI");
     return;
   }
+
+  // 為了安全，直接關掉瀏覽器預設驗證 + 預設 submit 行為
+  authForm.setAttribute("novalidate", "true");
 
   let mode = "login"; // "login" 或 "signup"
 
@@ -67,16 +70,18 @@ export function initAuthUI() {
     mode = nextMode;
     authError.textContent = "";
 
+    console.log("[Auth] openAuthModal mode =", mode);
+
     if (mode === "login") {
       authModalTitle.textContent = "登入 Telos";
       authSubmit.textContent = "登入";
-      signupExtra.classList.add("hidden");
+      signupExtra?.classList.add("hidden");
       switchToSignup.classList.remove("hidden");
       switchToLogin.classList.add("hidden");
     } else {
       authModalTitle.textContent = "建立 Telos 帳號";
       authSubmit.textContent = "註冊";
-      signupExtra.classList.remove("hidden");
+      signupExtra?.classList.remove("hidden");
       switchToSignup.classList.add("hidden");
       switchToLogin.classList.remove("hidden");
     }
@@ -86,6 +91,7 @@ export function initAuthUI() {
   }
 
   function closeAuthModal() {
+    console.log("[Auth] closeAuthModal()");
     authModalBackdrop.classList.add("hidden");
     authModalBackdrop.style.display = "none";
   }
@@ -111,7 +117,8 @@ export function initAuthUI() {
 
   // ===== 表單送出（登入 / 註冊） =====
   authForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    console.log("[Auth] form submit event 觸發");
+    e.preventDefault(); // ⭐ 一定要第一行就擋掉
     authError.textContent = "";
 
     const email = authEmail.value.trim();
@@ -126,11 +133,13 @@ export function initAuthUI() {
     }
 
     authSubmit.disabled = true;
+    console.log("[Auth] mode =", mode, "email =", email);
 
     try {
       if (mode === "login") {
         // ===== 登入 =====
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        console.log("[Auth] login success, uid =", cred.user.uid);
         closeAuthModal();
       } else {
         // ===== 註冊 =====
@@ -139,6 +148,7 @@ export function initAuthUI() {
           email,
           password
         );
+        console.log("[Auth] signup success, uid =", cred.user.uid);
 
         if (displayName) {
           await updateProfile(cred.user, { displayName });
@@ -183,6 +193,9 @@ export function initAuthUI() {
     } finally {
       authSubmit.disabled = false;
     }
+
+    // 保險再擋一次（雖然到這裡通常不會再觸發原生 submit 了）
+    return false;
   });
 
   // ===== 快速修改暱稱 → 直接打開 Profile Modal =====
@@ -193,6 +206,8 @@ export function initAuthUI() {
 
   // ===== 監聽登入狀態，更新 UI =====
   onAuthStateChanged(auth, (user) => {
+    console.log("[Auth] onAuthStateChanged, user =", user?.uid || "null");
+
     if (!user) {
       btnLogin.classList.remove("hidden");
       btnLogout.classList.add("hidden");
