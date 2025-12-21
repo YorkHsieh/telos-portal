@@ -224,41 +224,85 @@ export function initProfileUI() {
     openFriendModal();
   }
 
-  friendAddBtn.addEventListener("click", async () => {
-    friendError.textContent = "";
-    const v = friendInput.value.trim().toUpperCase();
-    if (!v) {
-      friendError.textContent = "請輸入 Telos ID。";
-      return;
-    }
-    if (!currentUser) {
-      friendError.textContent = "請先登入。";
-      return;
-    }
-    if (v === (userData.telosId || "")) {
-      friendError.textContent = "不能加自己。";
-      return;
-    }
+friendAddBtn.addEventListener("click", async () => {
+  friendError.textContent = "";
 
+  if (!currentUser || !userData) {
+    friendError.textContent = "請先登入。";
+    return;
+  }
+
+  const targetTelosId = friendInput.value.trim().toUpperCase();
+  if (!targetTelosId) {
+    friendError.textContent = "請輸入 Telos ID。";
+    return;
+  }
+
+  if (targetTelosId === userData.telosId) {
+    friendError.textContent = "不能加自己。";
+    return;
+  }
+
+  try {
+    // 1. 找對方
     const usersRef = collection(db, "users");
-    const qSnap = await getDocs(query(usersRef, where("telosId", "==", v)));
+    const qSnap = await getDocs(
+      query(usersRef, where("telosId", "==", targetTelosId))
+    );
+
     if (qSnap.empty) {
       friendError.textContent = "找不到此 Telos ID。";
       return;
     }
 
-    const ref = doc(db, "users", currentUser.uid);
-    const newFriends = [...(userData.friends || []), v];
+    const targetDoc = qSnap.docs[0];
+    const targetUid = targetDoc.id;
 
-    await updateDoc(ref, {
-      friends: newFriends,
-      updatedAt: serverTimestamp(),
-    });
+    // 2. 重新抓最新資料（不要信 userData）
+    const myRef = doc(db, "users", currentUser.uid);
+    const targetRef = doc(db, "users", targetUid);
 
-    userData.friends = newFriends;
+    const [mySnap, targetSnap] = await Promise.all([
+      getDoc(myRef),
+      getDoc(targetRef),
+    ]);
+
+    if (!mySnap.exists() || !targetSnap.exists()) {
+      friendError.textContent = "使用者資料異常，請重試。";
+      return;
+    }
+
+    const myFriends = mySnap.data().friends || [];
+    const targetFriends = targetSnap.data().friends || [];
+
+    // 3. 防止重複
+    if (myFriends.includes(targetTelosId)) {
+      friendError.textContent = "你們已經是好友了。";
+      return;
+    }
+
+    // 4. 雙向加入
+    await Promise.all([
+      updateDoc(myRef, {
+        friends: [...myFriends, targetTelosId],
+        updatedAt: serverTimestamp(),
+      }),
+      updateDoc(targetRef, {
+        friends: [...targetFriends, userData.telosId],
+        updatedAt: serverTimestamp(),
+      }),
+    ]);
+
+    // 5. 更新本地狀態 + UI
+    userData.friends = [...myFriends, targetTelosId];
     friendInput.value = "";
     renderFriendList();
-  });
+  } catch (err) {
+    console.error("加好友失敗：", err);
+    friendError.textContent = "加好友失敗，請稍後再試。";
+  }
+});
+
 
   // ===== 貼文牆 =====
   function renderPosts() {
