@@ -319,11 +319,13 @@ export function initChat() {
       const msgsRef = collection(threadRef, "messages");
 
       await addDoc(msgsRef, {
-        senderUid: user.uid,
-        senderName: user.displayName || user.email || "使用者",
-        text,
-        createdAt: serverTimestamp(),
-      });
+  senderUid: user.uid,
+  senderName: user.displayName || user.email || "使用者",
+  text,
+  createdAt: new Date(),                // ⭐ 立刻可用
+  createdAtServer: serverTimestamp(),   // ⭐ 給後端用
+});
+
 
       // 更新 thread 的 last message
       await setDoc(
