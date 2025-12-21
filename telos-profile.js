@@ -1,40 +1,35 @@
-// telos-profile.js — Telos Profile 2.0（完全匹配 index.html）
+// telos-profile.js — Telos Profile 2.0（Account Center 完善版：穩定開關/登入防呆/即時預覽/表單提交）
 
 import { auth, db } from "./firebase.js";
-import {
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
 import {
   doc,
   getDoc,
   updateDoc,
-  setDoc,
   collection,
-  addDoc,
-  serverTimestamp,
   query,
   where,
   getDocs,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 export function initProfileUI() {
   console.log("[Profile] initProfileUI 啟動");
 
-  // ===== 取得所有 HTML 元件 =====
+  // ===== HTML 元件 =====
   const profileModalBackdrop = document.getElementById("profile-modal-backdrop");
-  const profileModal = document.getElementById("profile-modal");
   const profileClose = document.getElementById("profile-modal-close");
 
+  const profileForm = document.getElementById("profile-form");
   const telosIdEl = document.getElementById("profile-userid");
   const nameInput = document.getElementById("profile-name");
   const genderSelect = document.getElementById("profile-gender");
   const avatarInput = document.getElementById("profile-avatar");
   const avatarPreview = document.getElementById("profile-avatar-preview");
   const bioTextarea = document.getElementById("profile-bio");
-
-  const saveBtn = document.getElementById("profile-save-btn");
   const statusEl = document.getElementById("profile-status");
+  const saveBtn = document.getElementById("profile-save-btn");
 
   const friendInput = document.getElementById("friend-id");
   const friendAddBtn = document.getElementById("friend-add-btn");
@@ -47,9 +42,7 @@ export function initProfileUI() {
   const postsList = document.getElementById("posts-list");
 
   const friendModalBackdrop = document.getElementById("friend-modal-backdrop");
-  const friendModal = document.getElementById("friend-modal");
   const friendModalClose = document.getElementById("friend-modal-close");
-
   const friendModalName = document.getElementById("friend-modal-name");
   const friendModalAvatar = document.getElementById("friend-modal-avatar");
   const friendModalId = document.getElementById("friend-modal-id");
@@ -57,257 +50,317 @@ export function initProfileUI() {
   const friendModalStatus = document.getElementById("friend-modal-status");
   const friendModalBio = document.getElementById("friend-modal-bio");
 
-  if (!telosIdEl) {
-    console.error("[Profile] index.html 與 JS 不匹配：找不到 profile-userid");
+  if (!profileModalBackdrop || !telosIdEl || !profileForm) {
+    console.error("[Profile] 缺少必要 DOM：profile-modal-backdrop / profile-userid / profile-form");
     return;
   }
 
   let currentUser = null;
   let userData = null;
 
-  // ===== 工具：打開 / 關閉 Modal =====
+  // 小快取：避免 renderFriendList 每次都狂查
+  const userCacheByTelosId = new Map();
+
+  // ===== Modal 開關 =====
   function openProfileModal() {
     profileModalBackdrop.classList.remove("hidden");
     profileModalBackdrop.style.display = "flex";
   }
-
   function closeProfileModal() {
     profileModalBackdrop.classList.add("hidden");
     profileModalBackdrop.style.display = "none";
   }
 
   profileClose?.addEventListener("click", closeProfileModal);
-  profileModalBackdrop?.addEventListener("click", (e) => {
+  profileModalBackdrop.addEventListener("click", (e) => {
     if (e.target === profileModalBackdrop) closeProfileModal();
   });
 
-  // 打開好友資料 modal
+  // ESC 關閉（帳號中心跟好友 modal 都能關）
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!profileModalBackdrop.classList.contains("hidden")) closeProfileModal();
+    if (friendModalBackdrop && !friendModalBackdrop.classList.contains("hidden")) closeFriendModal();
+  });
+
+  // 接收 open-profile（tools-panel / auth 會 dispatch）
+  document.addEventListener("open-profile", () => {
+    openProfileModal();
+  });
+
+  // ===== 好友 Modal 開關 =====
   function openFriendModal() {
+    if (!friendModalBackdrop) return;
     friendModalBackdrop.classList.remove("hidden");
     friendModalBackdrop.style.display = "flex";
   }
-
   function closeFriendModal() {
+    if (!friendModalBackdrop) return;
     friendModalBackdrop.classList.add("hidden");
     friendModalBackdrop.style.display = "none";
   }
-
   friendModalClose?.addEventListener("click", closeFriendModal);
   friendModalBackdrop?.addEventListener("click", (e) => {
     if (e.target === friendModalBackdrop) closeFriendModal();
   });
 
-  // ===== 接收 open-profile 事件（從 tools-panel / auth 呼叫）=====
-  document.addEventListener("open-profile", () => {
-    openProfileModal();
+  // ===== UI 鎖定（未登入禁用）=====
+  function setAccountEnabled(enabled) {
+    const dis = !enabled;
+    nameInput && (nameInput.disabled = dis);
+    genderSelect && (genderSelect.disabled = dis);
+    avatarInput && (avatarInput.disabled = dis);
+    bioTextarea && (bioTextarea.disabled = dis);
+    saveBtn && (saveBtn.disabled = dis);
+
+    friendInput && (friendInput.disabled = dis);
+    friendAddBtn && (friendAddBtn.disabled = dis);
+
+    postText && (postText.disabled = dis);
+    postSubmitBtn && (postSubmitBtn.disabled = dis);
+  }
+
+  // ===== 頭貼即時預覽 =====
+  avatarInput?.addEventListener("change", () => {
+    const file = avatarInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (avatarPreview) avatarPreview.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
   });
 
-  // ===== 監聽登入狀態 =====
-  onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-
-    if (!user) {
-      telosIdEl.textContent = "（請先登入）";
-      nameInput.value = "";
-      genderSelect.value = "";
-      bioTextarea.value = "";
-      avatarPreview.src = "";
-      friendsList.innerHTML = "";
-      postsList.innerHTML = "";
-      return;
-    }
-
-    // 讀取 Firestore 資料
-    const ref = doc(db, "users", user.uid);
+  // ===== 讀取使用者資料（集中管理）=====
+  async function loadUserDoc(uid) {
+    const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    return snap.data() || null;
+  }
 
-    if (!snap.exists()) {
-      console.warn("[Profile] Firestore user doc 不存在");
-      telosIdEl.textContent = "（尚未建立資料）";
+  function resetUIForLoggedOut() {
+    telosIdEl.textContent = "（請先登入）";
+    if (nameInput) nameInput.value = "";
+    if (genderSelect) genderSelect.value = "";
+    if (bioTextarea) bioTextarea.value = "";
+    if (avatarPreview) avatarPreview.src = "";
+    friendsList && (friendsList.innerHTML = "");
+    postsList && (postsList.innerHTML = "");
+    statusEl && (statusEl.textContent = "");
+    friendError && (friendError.textContent = "");
+    postError && (postError.textContent = "");
+  }
+
+  // ===== 監聽登入 =====
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user || null;
+
+    if (!currentUser) {
+      userData = null;
+      userCacheByTelosId.clear();
+      setAccountEnabled(false);
+      resetUIForLoggedOut();
       return;
     }
 
-    userData = snap.data() || {};
+    setAccountEnabled(true);
 
-    // ===== 填入資料 =====
-    telosIdEl.textContent = userData.telosId || "（尚未分配）";
-    nameInput.value =
-      userData.name || user.displayName || user.email || "";
-    genderSelect.value = userData.gender || "";
-    bioTextarea.value = userData.bio || "";
+    try {
+      userData = await loadUserDoc(currentUser.uid);
 
-    if (userData.avatarDataUrl) {
-      avatarPreview.src = userData.avatarDataUrl;
+      if (!userData) {
+        telosIdEl.textContent = "（尚未建立資料）";
+        return;
+      }
+
+      // 填 UI
+      telosIdEl.textContent = userData.telosId || "（尚未分配）";
+      if (nameInput) nameInput.value = userData.name || currentUser.displayName || currentUser.email || "";
+      if (genderSelect) genderSelect.value = userData.gender || "";
+      if (bioTextarea) bioTextarea.value = userData.bio || "";
+      if (avatarPreview) avatarPreview.src = userData.avatarDataUrl || "";
+
+      await renderFriendList();
+      renderPosts();
+    } catch (err) {
+      console.error("[Profile] load error:", err);
+      telosIdEl.textContent = "（載入失敗）";
     }
-
-    // ===== 好友列表 =====
-    renderFriendList();
-
-    // ===== 貼文 =====
-    renderPosts();
   });
 
-  // ===== 儲存個人資料 =====
-  saveBtn.addEventListener("click", async (e) => {
+  // ===== 儲存個人資料（用 form submit 更穩）=====
+  profileForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser || !userData) return;
 
     statusEl.textContent = "儲存中…";
 
-    let avatarDataUrl = userData.avatarDataUrl || "";
+    try {
+      let avatarDataUrl = userData.avatarDataUrl || "";
 
-    // 如果選了頭貼
-    const file = avatarInput.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      avatarDataUrl = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(file);
+      // 如果有選新頭貼，取預覽的 src（已經是 dataURL）
+      if (avatarPreview?.src) {
+        avatarDataUrl = avatarPreview.src;
+      }
+
+      const ref = doc(db, "users", currentUser.uid);
+      await updateDoc(ref, {
+        name: (nameInput?.value || "").trim(),
+        gender: genderSelect?.value || "",
+        bio: (bioTextarea?.value || "").trim(),
+        avatarDataUrl,
+        updatedAt: serverTimestamp(),
       });
+
+      // 重新抓一次，確保 UI/快取一致
+      userData = await loadUserDoc(currentUser.uid);
+
+      statusEl.textContent = "已儲存！";
+      setTimeout(() => (statusEl.textContent = ""), 1200);
+
+      // 也順便刷新好友/貼文（避免你改名後好友清單仍顯示舊名）
+      userCacheByTelosId.clear();
+      await renderFriendList();
+      renderPosts();
+    } catch (err) {
+      console.error("[Profile] save error:", err);
+      statusEl.textContent = "儲存失敗";
+      setTimeout(() => (statusEl.textContent = ""), 1500);
     }
-
-    const ref = doc(db, "users", currentUser.uid);
-
-    await updateDoc(ref, {
-      name: nameInput.value.trim(),
-      gender: genderSelect.value,
-      bio: bioTextarea.value.trim(),
-      avatarDataUrl,
-      updatedAt: serverTimestamp(),
-    });
-
-    statusEl.textContent = "已儲存！";
-    setTimeout(() => (statusEl.textContent = ""), 1500);
   });
 
-  // ===== 好友系統 =====
-  async function renderFriendList() {
-    friendsList.innerHTML = "";
+  // ===== 好友列表 =====
+  async function fetchUserByTelosId(telosId) {
+    if (userCacheByTelosId.has(telosId)) return userCacheByTelosId.get(telosId);
 
-    const friendIds = userData.friends || [];
-    if (friendIds.length === 0) {
-      const li = document.createElement("li");
-      li.textContent = "目前還沒有好友。";
-      friendsList.appendChild(li);
-      return;
-    }
+    const usersRef = collection(db, "users");
+    const qSnap = await getDocs(query(usersRef, where("telosId", "==", telosId)));
+    if (qSnap.empty) return null;
 
-    for (const telosId of friendIds) {
-      const usersRef = collection(db, "users");
-      const qSnap = await getDocs(query(usersRef, where("telosId", "==", telosId)));
-
-      if (qSnap.empty) continue;
-
-      const docSnap = qSnap.docs[0];
-      const data = docSnap.data();
-
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span class="friend-name">${data.name || data.telosId}</span>
-        <span class="friend-email">${data.email || ""}</span>
-      `;
-
-      li.addEventListener("click", () => showFriendModal(data));
-
-      friendsList.appendChild(li);
-    }
+    const data = qSnap.docs[0].data() || null;
+    userCacheByTelosId.set(telosId, data);
+    return data;
   }
 
-  function showFriendModal(data) {
-    friendModalName.textContent = data.name || data.telosId;
-    friendModalAvatar.src = data.avatarDataUrl || "";
-    friendModalId.textContent = data.telosId;
-    friendModalEmail.textContent = data.email || "";
-    friendModalStatus.textContent = "";
-    friendModalBio.textContent = data.bio || "";
+  async function renderFriendList() {
+  if (!friendsList) return;
+  friendsList.innerHTML = "";
 
+  const friendIds = userData?.friends || [];
+
+  if (friendIds.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "目前還沒有好友。";
+    friendsList.appendChild(li);
+    return;
+  }
+
+  for (const telosId of friendIds) {
+    const usersRef = collection(db, "users");
+    const qSnap = await getDocs(
+      query(usersRef, where("telosId", "==", telosId))
+    );
+
+    if (qSnap.empty) continue;
+
+    const docSnap = qSnap.docs[0];
+    const data = docSnap.data();
+
+    const li = document.createElement("li");
+    li.classList.add("friend-item");
+
+    li.innerHTML = `
+      <img
+        class="friend-avatar"
+        src="${data.avatarDataUrl || ""}"
+        alt="avatar"
+      />
+      <div class="friend-info">
+        <div class="friend-name">${data.name || data.telosId}</div>
+        <div class="friend-email">${data.email || ""}</div>
+      </div>
+    `;
+
+    li.addEventListener("click", () => showFriendModal(data));
+    friendsList.appendChild(li);
+  }
+}
+  // ===== 好友資料 Modal =====
+
+  function showFriendModal(data) {
+    if (!friendModalName) return;
+    friendModalName.textContent = data.name || data.telosId || "好友資料";
+    if (friendModalAvatar) friendModalAvatar.src = data.avatarDataUrl || "";
+    if (friendModalId) friendModalId.textContent = data.telosId || "";
+    if (friendModalEmail) friendModalEmail.textContent = data.email || "";
+    if (friendModalStatus) friendModalStatus.textContent = "";
+    if (friendModalBio) friendModalBio.textContent = data.bio || "";
     openFriendModal();
   }
 
-friendAddBtn.addEventListener("click", async () => {
-  friendError.textContent = "";
-
-  if (!currentUser || !userData) {
-    friendError.textContent = "請先登入。";
-    return;
-  }
-
-  const targetTelosId = friendInput.value.trim().toUpperCase();
-  if (!targetTelosId) {
-    friendError.textContent = "請輸入 Telos ID。";
-    return;
-  }
-
-  if (targetTelosId === userData.telosId) {
-    friendError.textContent = "不能加自己。";
-    return;
-  }
-
-  try {
-    // 1. 找對方
-    const usersRef = collection(db, "users");
-    const qSnap = await getDocs(
-      query(usersRef, where("telosId", "==", targetTelosId))
-    );
-
-    if (qSnap.empty) {
-      friendError.textContent = "找不到此 Telos ID。";
+  // ===== 加好友（你剛修好的雙向版：這裡先不動）=====
+  friendAddBtn?.addEventListener("click", async () => {
+    friendError.textContent = "";
+    if (!currentUser || !userData) {
+      friendError.textContent = "請先登入。";
       return;
     }
 
-    const targetDoc = qSnap.docs[0];
-    const targetUid = targetDoc.id;
-
-    // 2. 重新抓最新資料（不要信 userData）
-    const myRef = doc(db, "users", currentUser.uid);
-    const targetRef = doc(db, "users", targetUid);
-
-    const [mySnap, targetSnap] = await Promise.all([
-      getDoc(myRef),
-      getDoc(targetRef),
-    ]);
-
-    if (!mySnap.exists() || !targetSnap.exists()) {
-      friendError.textContent = "使用者資料異常，請重試。";
+    const targetTelosId = (friendInput?.value || "").trim().toUpperCase();
+    if (!targetTelosId) {
+      friendError.textContent = "請輸入 Telos ID。";
+      return;
+    }
+    if (targetTelosId === userData.telosId) {
+      friendError.textContent = "不能加自己。";
       return;
     }
 
-    const myFriends = mySnap.data().friends || [];
-    const targetFriends = targetSnap.data().friends || [];
+    try {
+      // 找對方
+      const usersRef = collection(db, "users");
+      const qSnap = await getDocs(query(usersRef, where("telosId", "==", targetTelosId)));
+      if (qSnap.empty) {
+        friendError.textContent = "找不到此 Telos ID。";
+        return;
+      }
+      const targetUid = qSnap.docs[0].id;
 
-    // 3. 防止重複
-    if (myFriends.includes(targetTelosId)) {
-      friendError.textContent = "你們已經是好友了。";
-      return;
+      // 重新抓最新 friends
+      const myRef = doc(db, "users", currentUser.uid);
+      const targetRef = doc(db, "users", targetUid);
+
+      const [mySnap, targetSnap] = await Promise.all([getDoc(myRef), getDoc(targetRef)]);
+      const myFriends = (mySnap.data()?.friends || []);
+      const targetFriends = (targetSnap.data()?.friends || []);
+
+      if (myFriends.includes(targetTelosId)) {
+        friendError.textContent = "你們已經是好友了。";
+        return;
+      }
+
+      await Promise.all([
+        updateDoc(myRef, { friends: [...myFriends, targetTelosId], updatedAt: serverTimestamp() }),
+        updateDoc(targetRef, { friends: [...targetFriends, userData.telosId], updatedAt: serverTimestamp() }),
+      ]);
+
+      // 更新本地 + 刷新
+      userData = await loadUserDoc(currentUser.uid);
+      userCacheByTelosId.clear();
+      friendInput.value = "";
+      await renderFriendList();
+    } catch (err) {
+      console.error("加好友失敗：", err);
+      friendError.textContent = "加好友失敗，稍後再試。";
     }
+  });
 
-    // 4. 雙向加入
-    await Promise.all([
-      updateDoc(myRef, {
-        friends: [...myFriends, targetTelosId],
-        updatedAt: serverTimestamp(),
-      }),
-      updateDoc(targetRef, {
-        friends: [...targetFriends, userData.telosId],
-        updatedAt: serverTimestamp(),
-      }),
-    ]);
-
-    // 5. 更新本地狀態 + UI
-    userData.friends = [...myFriends, targetTelosId];
-    friendInput.value = "";
-    renderFriendList();
-  } catch (err) {
-    console.error("加好友失敗：", err);
-    friendError.textContent = "加好友失敗，請稍後再試。";
-  }
-});
-
-
-  // ===== 貼文牆 =====
+  // ===== 貼文牆（你目前是存 users/{uid}.posts array：先維持不改結構）=====
   function renderPosts() {
+    if (!postsList) return;
     postsList.innerHTML = "";
-    const posts = userData.posts || [];
+    const posts = userData?.posts || [];
 
     if (posts.length === 0) {
       const li = document.createElement("li");
@@ -326,34 +379,47 @@ friendAddBtn.addEventListener("click", async () => {
     });
   }
 
-  postSubmitBtn.addEventListener("click", async () => {
+  postSubmitBtn?.addEventListener("click", async () => {
     postError.textContent = "";
-    const text = postText.value.trim();
-
-    if (!text) {
-      postError.textContent = "請輸入內容。";
-      return;
-    }
-    if (!currentUser) {
+    if (!currentUser || !userData) {
       postError.textContent = "請先登入。";
       return;
     }
 
-    const ref = doc(db, "users", currentUser.uid);
-    const newPost = {
-      text,
-      createdAt: new Date().toLocaleString(),
-    };
+    const text = (postText?.value || "").trim();
+    if (!text) {
+      postError.textContent = "請輸入內容。";
+      return;
+    }
 
-    const posts = [...(userData.posts || []), newPost];
+    try {
+      const ref = doc(db, "users", currentUser.uid);
+      const newPost = {
+        text,
+        createdAt: new Date().toLocaleString(),
+      };
+      const posts = [...(userData.posts || []), newPost];
 
-    await updateDoc(ref, {
-      posts,
-      updatedAt: serverTimestamp(),
-    });
+      await updateDoc(ref, { posts, updatedAt: serverTimestamp() });
 
-    userData.posts = posts;
-    postText.value = "";
-    renderPosts();
+      userData = await loadUserDoc(currentUser.uid);
+      postText.value = "";
+      renderPosts();
+    } catch (err) {
+      console.error("發貼文失敗：", err);
+      postError.textContent = "發布失敗，稍後再試。";
+    }
   });
 }
+// ===== 帳號中心分頁切換 =====
+document.querySelectorAll(".account-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+
+    document.querySelectorAll(".account-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".account-panel").forEach(p => p.classList.remove("active"));
+
+    btn.classList.add("active");
+    document.querySelector(`.account-panel[data-panel="${tab}"]`)?.classList.add("active");
+  });
+});

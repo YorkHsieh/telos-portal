@@ -223,94 +223,94 @@
     </div>
   </div>
 
-  <!-- Profile Modal（個人資料 + 好友 + 貼文牆） -->
-  <div class="modal-backdrop hidden" id="profile-modal-backdrop">
-    <div class="modal profile-modal" id="profile-modal">
-      <button class="modal-close" id="profile-modal-close" aria-label="關閉">
-        ✕
-      </button>
-      <h2>個人資料</h2>
+<!-- Profile Modal（帳號中心：個人資料 / 好友 / 貼文） -->
+<div class="modal-backdrop hidden" id="profile-modal-backdrop">
+  <div class="modal profile-modal profile-modal--large" id="profile-modal">
+    <button class="modal-close" id="profile-modal-close" aria-label="關閉">✕</button>
 
-      <form id="profile-form">
-        <div class="field">
-          <span>我的 Telos ID</span>
-          <span id="profile-userid" class="profile-id-display">（登入後會產生）</span>
+    <div class="account-layout">
+      <!-- 左側選單 -->
+      <aside class="account-sidebar">
+        <h2 class="account-title">帳號中心</h2>
+        <button type="button" class="account-tab active" data-tab="account">我的帳號</button>
+        <button type="button" class="account-tab" data-tab="friends">好友</button>
+        <button type="button" class="account-tab" data-tab="posts">貼文牆</button>
+      </aside>
+
+      <!-- 右側內容 -->
+      <section class="account-content">
+        <!-- ===== 我的帳號 ===== -->
+        <div class="account-panel active" data-panel="account">
+          <form id="profile-form">
+            <div class="field">
+              <span>我的 Telos ID</span>
+              <span id="profile-userid" class="profile-id-display">（登入後會產生）</span>
+            </div>
+
+            <div class="field">
+              <span>顯示名稱</span>
+              <input type="text" id="profile-name" placeholder="例如：祐子" />
+            </div>
+
+            <div class="field">
+              <span>性別</span>
+              <select id="profile-gender">
+                <option value="">不顯示</option>
+                <option value="female">女生</option>
+                <option value="male">男生</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <span>頭貼</span>
+              <div class="avatar-row">
+                <img id="profile-avatar-preview" class="avatar-preview" alt="頭貼預覽" />
+                <input type="file" id="profile-avatar" accept="image/*" />
+              </div>
+            </div>
+
+            <div class="field">
+              <span>自我介紹</span>
+              <textarea id="profile-bio" rows="3" placeholder="寫點什麼關於你自己（可選）"></textarea>
+            </div>
+
+            <button type="submit" id="profile-save-btn">儲存個人資料</button>
+            <p id="profile-status" class="profile-status"></p>
+          </form>
         </div>
 
+        <!-- ===== 好友 ===== -->
+        <div class="account-panel" data-panel="friends">
+          <h3 class="friends-title">好友</h3>
 
-        <div class="field">
-          <span>顯示名稱</span>
-          <input
-            type="text"
-            id="profile-name"
-            placeholder="例如：祐子"
-          />
-        </div>
-
-        <div class="field">
-          <span>性別</span>
-          <select id="profile-gender">
-            <option value="">不顯示</option>
-            <option value="female">女生</option>
-            <option value="male">男生</option>
-            <option value="other">其他</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <span>頭貼</span>
-          <div class="avatar-row">
-            <img
-              id="profile-avatar-preview"
-              class="avatar-preview"
-              alt="頭貼預覽"
-            />
-            <input type="file" id="profile-avatar" accept="image/*" />
+          <div class="field">
+            <span>用 Telos ID 加好友</span>
+            <input type="text" id="friend-id" placeholder="例如：TABC1234" />
+            <button type="button" id="friend-add-btn">加好友</button>
+            <p class="auth-error" id="friend-error"></p>
           </div>
+
+          <ul id="friends-list" class="friends-list"></ul>
         </div>
 
-        <div class="field">
-          <span>自我介紹</span>
-          <textarea
-            id="profile-bio"
-            rows="3"
-            placeholder="寫點什麼關於你自己（可選）"
-          ></textarea>
+        <!-- ===== 貼文牆 ===== -->
+        <div class="account-panel" data-panel="posts">
+          <h3 class="posts-title">我的貼文牆</h3>
+
+          <div class="field">
+            <span>發一則貼文</span>
+            <textarea id="post-text" rows="3" placeholder="今天想跟朋友分享什麼？"></textarea>
+            <button type="button" id="post-submit-btn">發布</button>
+            <p class="auth-error" id="post-error"></p>
+          </div>
+
+          <ul id="posts-list" class="posts-list"></ul>
         </div>
-
-        <button type="submit" id="profile-save-btn">儲存個人資料</button>
-        <p id="profile-status" class="profile-status"></p>
-      </form>
-
-      <h3 class="friends-title">好友</h3>
-      <div class="field">
-        <span>用 Telos ID 加好友</span>
-        <input
-          type="text"
-          id="friend-id"
-          placeholder="例如：TABC1234"
-        />
-        <button type="button" id="friend-add-btn">加好友</button>
-        <p class="auth-error" id="friend-error"></p>
-      </div>
-
-      <ul id="friends-list" class="friends-list"></ul>
-
-      <h3 class="posts-title">我的貼文牆</h3>
-      <div class="field">
-        <span>發一則貼文</span>
-        <textarea
-          id="post-text"
-          rows="3"
-          placeholder="今天想跟朋友分享什麼？"
-        ></textarea>
-        <button type="button" id="post-submit-btn">發布</button>
-        <p class="auth-error" id="post-error"></p>
-      </div>
-
-      <ul id="posts-list" class="posts-list"></ul>
+      </section>
     </div>
   </div>
+</div>
 
   <!-- Friend Profile Modal（好友個頁） -->
   <div class="modal-backdrop hidden" id="friend-modal-backdrop">
