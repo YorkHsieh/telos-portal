@@ -8,11 +8,14 @@ import {
   getDoc,
   updateDoc,
   collection,
+  serverTimestamp,
   query,
   where,
   getDocs,
-  serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
 
 export function initProfileUI() {
   console.log("[Profile] initProfileUI 啟動");
@@ -173,6 +176,17 @@ export function initProfileUI() {
         telosIdEl.textContent = "（尚未建立資料）";
         return;
       }
+          // ✅【補齊資料結構：只貼在這裡】
+    userData.following = userData.following || [];
+    userData.followers = userData.followers || [];
+    userData.telosId = userData.telosId || "";
+    telosIdEl.textContent = userData.telosId;
+    renderFriendList();
+    renderPosts();
+  }catch (err) {
+  console.error("[Profile] load user failed:", err);
+}
+});
 
       // 填 UI
       telosIdEl.textContent = userData.telosId || "（尚未分配）";
@@ -181,13 +195,8 @@ export function initProfileUI() {
       if (bioTextarea) bioTextarea.value = userData.bio || "";
       if (avatarPreview) avatarPreview.src = userData.avatarDataUrl || "";
 
-      await renderFriendList();
+      renderFriendList();
       renderPosts();
-    } catch (err) {
-      console.error("[Profile] load error:", err);
-      telosIdEl.textContent = "（載入失敗）";
-    }
-  });
 
   // ===== 儲存個人資料（用 form submit 更穩）=====
   profileForm.addEventListener("submit", async (e) => {
@@ -243,49 +252,45 @@ export function initProfileUI() {
     return data;
   }
 
-  async function renderFriendList() {
+async function renderFriendList() {
   if (!friendsList) return;
   friendsList.innerHTML = "";
 
-  const friendIds = userData?.friends || [];
+  const followingUids = userData?.following || [];
 
-  if (friendIds.length === 0) {
+  if (followingUids.length === 0) {
     const li = document.createElement("li");
-    li.textContent = "目前還沒有好友。";
+    li.textContent = "目前還沒有追蹤任何人。";
     friendsList.appendChild(li);
     return;
   }
 
-  for (const telosId of friendIds) {
-    const usersRef = collection(db, "users");
-    const qSnap = await getDocs(
-      query(usersRef, where("telosId", "==", telosId))
-    );
+  for (const uid of followingUids) {
+    try {
+      const snap = await getDoc(doc(db, "users", uid));
+      if (!snap.exists()) continue;
 
-    if (qSnap.empty) continue;
+      const data = snap.data();
 
-    const docSnap = qSnap.docs[0];
-    const data = docSnap.data();
+      const li = document.createElement("li");
+      li.classList.add("friend-item");
 
-    const li = document.createElement("li");
-    li.classList.add("friend-item");
+      li.innerHTML = `
+        <img class="friend-avatar" src="${data.avatarDataUrl || ""}" alt="avatar" />
+        <div class="friend-info">
+          <div class="friend-name">${data.name || data.telosId || "使用者"}</div>
+          <div class="friend-email">${data.email || ""}</div>
+        </div>
+      `;
 
-    li.innerHTML = `
-      <img
-        class="friend-avatar"
-        src="${data.avatarDataUrl || ""}"
-        alt="avatar"
-      />
-      <div class="friend-info">
-        <div class="friend-name">${data.name || data.telosId}</div>
-        <div class="friend-email">${data.email || ""}</div>
-      </div>
-    `;
-
-    li.addEventListener("click", () => showFriendModal(data));
-    friendsList.appendChild(li);
+      li.addEventListener("click", () => showFriendModal(data));
+      friendsList.appendChild(li);
+    } catch (e) {
+      console.warn("[Profile] renderFriendList getDoc failed:", e);
+    }
   }
 }
+
   // ===== 好友資料 Modal =====
 
   function showFriendModal(data) {
@@ -294,67 +299,78 @@ export function initProfileUI() {
     if (friendModalAvatar) friendModalAvatar.src = data.avatarDataUrl || "";
     if (friendModalId) friendModalId.textContent = data.telosId || "";
     if (friendModalEmail) friendModalEmail.textContent = data.email || "";
-    if (friendModalStatus) friendModalStatus.textContent = "";
+    if (friendModalStatus) friendModalStatus.textContent =
+  `追蹤中 ${data.following?.length || 0} · 粉絲 ${data.followers?.length || 0}`;
+
     if (friendModalBio) friendModalBio.textContent = data.bio || "";
     openFriendModal();
   }
 
   // ===== 加好友（你剛修好的雙向版：這裡先不動）=====
-  friendAddBtn?.addEventListener("click", async () => {
-    friendError.textContent = "";
-    if (!currentUser || !userData) {
-      friendError.textContent = "請先登入。";
-      return;
-    }
+friendAddBtn.addEventListener("click", async () => {
+  friendError.textContent = "";
 
-    const targetTelosId = (friendInput?.value || "").trim().toUpperCase();
-    if (!targetTelosId) {
-      friendError.textContent = "請輸入 Telos ID。";
-      return;
-    }
-    if (targetTelosId === userData.telosId) {
-      friendError.textContent = "不能加自己。";
-      return;
-    }
+  if (!currentUser) {
+    friendError.textContent = "請先登入。";
+    return;
+  }
 
-    try {
-      // 找對方
-      const usersRef = collection(db, "users");
-      const qSnap = await getDocs(query(usersRef, where("telosId", "==", targetTelosId)));
-      if (qSnap.empty) {
-        friendError.textContent = "找不到此 Telos ID。";
-        return;
-      }
-      const targetUid = qSnap.docs[0].id;
+  const inputTelosId = friendInput.value.trim().toUpperCase();
+  if (!inputTelosId) {
+    friendError.textContent = "請輸入 Telos ID。";
+    return;
+  }
 
-      // 重新抓最新 friends
-      const myRef = doc(db, "users", currentUser.uid);
-      const targetRef = doc(db, "users", targetUid);
+  if (inputTelosId === (userData?.telosId || "")) {
+    friendError.textContent = "不能追蹤自己。";
+    return;
+  }
 
-      const [mySnap, targetSnap] = await Promise.all([getDoc(myRef), getDoc(targetRef)]);
-      const myFriends = (mySnap.data()?.friends || []);
-      const targetFriends = (targetSnap.data()?.friends || []);
+  // 先用 Telos ID 找到對方 uid
+  const usersRef = collection(db, "users");
+  const qSnap = await getDocs(query(usersRef, where("telosId", "==", inputTelosId)));
 
-      if (myFriends.includes(targetTelosId)) {
-        friendError.textContent = "你們已經是好友了。";
-        return;
-      }
+  if (qSnap.empty) {
+    friendError.textContent = "找不到此 Telos ID。";
+    return;
+  }
 
+  const targetDoc = qSnap.docs[0];
+  const targetUid = targetDoc.id;
+
+  const myRef = doc(db, "users", currentUser.uid);
+  const targetRef = doc(db, "users", targetUid);
+
+  const isFollowing = (userData?.following || []).includes(targetUid);
+
+  try {
+    if (isFollowing) {
+      // ===== 取消追蹤：我 following 移除對方uid / 對方 followers 移除我uid =====
       await Promise.all([
-        updateDoc(myRef, { friends: [...myFriends, targetTelosId], updatedAt: serverTimestamp() }),
-        updateDoc(targetRef, { friends: [...targetFriends, userData.telosId], updatedAt: serverTimestamp() }),
+        updateDoc(myRef, { following: arrayRemove(targetUid), updatedAt: serverTimestamp() }),
+        updateDoc(targetRef, { followers: arrayRemove(currentUser.uid), updatedAt: serverTimestamp() }),
       ]);
 
-      // 更新本地 + 刷新
-      userData = await loadUserDoc(currentUser.uid);
-      userCacheByTelosId.clear();
-      friendInput.value = "";
-      await renderFriendList();
-    } catch (err) {
-      console.error("加好友失敗：", err);
-      friendError.textContent = "加好友失敗，稍後再試。";
+      // 本地同步（不重抓也能更新 UI）
+      userData.following = (userData.following || []).filter((u) => u !== targetUid);
+    } else {
+      // ===== 追蹤：我 following 加對方uid / 對方 followers 加我uid =====
+      await Promise.all([
+        updateDoc(myRef, { following: arrayUnion(targetUid), updatedAt: serverTimestamp() }),
+        updateDoc(targetRef, { followers: arrayUnion(currentUser.uid), updatedAt: serverTimestamp() }),
+      ]);
+
+      userData.following = [...(userData.following || []), targetUid];
     }
-  });
+
+    friendInput.value = "";
+    renderFriendList();
+  } catch (err) {
+    console.error("[Profile] follow/unfollow failed:", err);
+    friendError.textContent = "操作失敗，稍後再試。";
+  }
+});
+
 
   // ===== 貼文牆（你目前是存 users/{uid}.posts array：先維持不改結構）=====
   function renderPosts() {
