@@ -23,6 +23,7 @@ export function initProfileUI() {
   // ===== HTML 元件 =====
   const profileModalBackdrop = document.getElementById("profile-modal-backdrop");
   const profileClose = document.getElementById("profile-modal-close");
+  const friendFollowBtn = document.getElementById("friend-follow-btn");
 
   const profileForm = document.getElementById("profile-form");
   const telosIdEl = document.getElementById("profile-userid");
@@ -293,18 +294,31 @@ async function renderFriendList() {
 
   // ===== 好友資料 Modal =====
 
-  function showFriendModal(data) {
-    if (!friendModalName) return;
-    friendModalName.textContent = data.name || data.telosId || "好友資料";
-    if (friendModalAvatar) friendModalAvatar.src = data.avatarDataUrl || "";
-    if (friendModalId) friendModalId.textContent = data.telosId || "";
-    if (friendModalEmail) friendModalEmail.textContent = data.email || "";
-    if (friendModalStatus) friendModalStatus.textContent =
-  `追蹤中 ${data.following?.length || 0} · 粉絲 ${data.followers?.length || 0}`;
+function showFriendModal(data) {
+  friendModalName.textContent = data.name || data.telosId;
+  friendModalAvatar.src = data.avatarDataUrl || "";
+  friendModalId.textContent = data.telosId;
+  friendModalEmail.textContent = data.email || "";
+  friendModalBio.textContent = data.bio || "";
 
-    if (friendModalBio) friendModalBio.textContent = data.bio || "";
-    openFriendModal();
-  }
+  const followingCount = data.following?.length || 0;
+  const followersCount = data.followers?.length || 0;
+
+  friendModalStatus.textContent =
+    `追蹤中 ${followingCount} · 粉絲 ${followersCount}`;
+
+  // ===== 追蹤狀態 =====
+  const isFollowing = userData.following?.includes(data.telosId);
+
+  friendFollowBtn.textContent = isFollowing ? "取消追蹤" : "追蹤";
+
+  friendFollowBtn.onclick = async () => {
+    await toggleFollow(data);
+  };
+
+  openFriendModal();
+}
+
 
   // ===== 加好友（你剛修好的雙向版：這裡先不動）=====
 friendAddBtn.addEventListener("click", async () => {
@@ -439,3 +453,54 @@ document.querySelectorAll(".account-tab").forEach((btn) => {
     document.querySelector(`.account-panel[data-panel="${tab}"]`)?.classList.add("active");
   });
 });
+async function toggleFollow(targetUserData) {
+  if (!currentUser || !userData) return;
+
+  const myRef = doc(db, "users", currentUser.uid);
+
+  // 找對方 uid
+  const usersRef = collection(db, "users");
+  const qSnap = await getDocs(
+    query(usersRef, where("telosId", "==", targetUserData.telosId))
+  );
+  if (qSnap.empty) return;
+
+  const targetDoc = qSnap.docs[0];
+  const targetRef = targetDoc.ref;
+  const targetData = targetDoc.data();
+
+  const myTelosId = userData.telosId;
+  const targetTelosId = targetUserData.telosId;
+
+  const isFollowing = userData.following.includes(targetTelosId);
+
+  if (isFollowing) {
+    // 取消追蹤
+    userData.following = userData.following.filter(id => id !== targetTelosId);
+    targetData.followers = (targetData.followers || []).filter(id => id !== myTelosId);
+  } else {
+    // 追蹤
+  if (!userData.following.includes(targetTelosId)) {
+    userData.following.push(targetTelosId);
+  }
+
+  if (!(targetData.followers || []).includes(myTelosId)) {
+    targetData.followers = [...(targetData.followers || []), myTelosId];
+  }
+
+
+  await updateDoc(myRef, {
+    following: userData.following,
+    updatedAt: serverTimestamp(),
+  });
+
+  await updateDoc(targetRef, {
+    followers: targetData.followers,
+    updatedAt: serverTimestamp(),
+  });}
+
+  renderFriendList();
+  
+  // 更新按鈕文字
+  friendFollowBtn.textContent = isFollowing ? "追蹤" : "取消追蹤";
+} 
